@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #0a0e14;
+  --color-card: #121826;
+  --color-neon-cyan: #22d3ee;
+  --color-neon-lime: #a3e635;
+  --color-neon-violet: #a78bfa;
+}
+
+html,
+body {
+  background-color: var(--color-surface);
+  color: #e5e7eb;
+  min-height: 100dvh;
+  /* iOS-Safe-Areas */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+}
