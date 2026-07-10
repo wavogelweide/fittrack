@@ -7,11 +7,13 @@ import TabBar, { type Tab } from './components/TabBar'
 import SuchFeld from './components/SuchFeld'
 import DetailAnsicht, { type Auswahl } from './components/DetailAnsicht'
 import { CardioListe, DehnListe, KraftListe } from './components/KatalogListen'
+import ProfilTab from './components/ProfilTab'
 
 const TAB_TITEL: Record<Tab, string> = {
   kraft: 'Kraftübungen',
   cardio: 'Cardio-Geräte',
   dehnen: 'Dehnen & Blackroll',
+  profil: 'Profil',
 }
 
 function App() {
@@ -34,9 +36,11 @@ function App() {
           Fit<span className="text-neon-cyan">Track</span>
           <span className="ml-3 text-base font-medium text-gray-400">{TAB_TITEL[tab]}</span>
         </h1>
-        <div className="mt-3">
-          <SuchFeld wert={suche} onChange={setSuche} />
-        </div>
+        {tab !== 'profil' && (
+          <div className="mt-3">
+            <SuchFeld wert={suche} onChange={setSuche} />
+          </div>
+        )}
       </header>
 
       <main className="mt-3">
@@ -58,6 +62,7 @@ function App() {
             onAuswahl={(u) => setAuswahl({ typ: 'dehnen', uebung: u })}
           />
         )}
+        {tab === 'profil' && <ProfilTab />}
       </main>
 
       <TabBar tab={tab} onChange={wechsleTab} />

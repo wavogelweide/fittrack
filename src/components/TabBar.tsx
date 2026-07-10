@@ -1,4 +1,4 @@
-export type Tab = 'kraft' | 'cardio' | 'dehnen'
+export type Tab = 'kraft' | 'cardio' | 'dehnen' | 'profil'
 
 const TABS: { id: Tab; label: string; aktivKlasse: string; icon: React.ReactNode }[] = [
   {
@@ -29,6 +29,17 @@ const TABS: { id: Tab; label: string; aktivKlasse: string; icon: React.ReactNode
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <circle cx="12" cy="4.5" r="2" />
         <path d="M12 7.5v5m0 0c0 3-5 4-5 9m5-9c0 3 5 4 5 9M5.5 10.5 12 12l6.5-1.5" />
+      </svg>
+    ),
+  },
+  {
+    id: 'profil',
+    label: 'Profil',
+    aktivKlasse: 'text-gray-100',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 20c1.5-4 4-5.5 7-5.5s5.5 1.5 7 5.5" />
       </svg>
     ),
   },

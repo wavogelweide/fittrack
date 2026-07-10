@@ -1,7 +1,11 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../db/db'
 import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchExercise } from '../db/types'
+import { ga1Zone } from '../logic/puls'
 import Chip from './Chip'
 import ExerciseIllustration from './ExerciseIllustration'
+import MaxGewicht from './MaxGewicht'
 
 export type Auswahl =
   | { typ: 'kraft'; uebung: Exercise }
@@ -71,11 +75,15 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
           </div>
         </Abschnitt>
       )}
+
+      <MaxGewicht uebung={uebung} />
     </>
   )
 }
 
 function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
+  const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const zone = ga1Zone(profil ?? {})
   return (
     <>
       <h2 className="text-3xl font-bold tracking-tight">{geraet.name}</h2>
@@ -94,9 +102,21 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
             <p className="font-semibold text-neon-cyan">GA1 – Grundlagenausdauer</p>
             <p className="mt-1 text-sm leading-relaxed text-gray-300">
               Lockeres Tempo in der Pulszone von 60–75 % der maximalen Herzfrequenz, empfohlene
-              Dauer 30–60 Minuten. Deine persönliche Zone berechnet die App ab Phase 2 aus deinem
-              Profil.
+              Dauer 30–60 Minuten.
             </p>
+            {zone ? (
+              <p className="mt-2 text-sm text-gray-300">
+                Deine Zone:{' '}
+                <span className="text-2xl font-bold text-neon-cyan">
+                  {zone.von}–{zone.bis}
+                </span>{' '}
+                bpm
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-gray-500">
+                Trage dein Alter im Profil-Tab ein, um deine persönliche Zone zu sehen.
+              </p>
+            )}
           </div>
           <div className="rounded-xl border border-neon-cyan/25 bg-neon-cyan/5 p-4">
             <p className="font-semibold text-neon-cyan">60/120-Intervalle</p>

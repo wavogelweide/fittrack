@@ -13,7 +13,8 @@
     "dexie": "^4.4.4",
     "dexie-react-hooks": "^4.4.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "recharts": "^3.9.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",
