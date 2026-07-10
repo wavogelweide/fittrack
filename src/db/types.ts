@@ -134,9 +134,12 @@ export interface UserProfile {
 
 export interface Goal {
   id: number
-  typ: 'cardio_zeit' | 'cardio_distanz' | 'kraft_gewicht'
+  // 'cardio_leistung' = Distanz in Zeit bis Datum; 'cardio_zeit'/'cardio_distanz'
+  // sind Alt-Typen früherer Versionen und bleiben lesbar
+  typ: 'kraft_gewicht' | 'cardio_leistung' | 'cardio_zeit' | 'cardio_distanz'
   referenz: string // CardioTypeId oder exerciseId
-  zielwert: number
+  zielwert: number // kg (1RM), km (cardio_leistung/distanz) oder Min. (cardio_zeit)
+  zielDauerMin?: number // nur cardio_leistung: Zeitvorgabe für die Distanz
   zieldatum?: string
   status: 'aktiv' | 'erreicht' | 'abgebrochen'
 }
