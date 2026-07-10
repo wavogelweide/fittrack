@@ -13,6 +13,7 @@ import ProfilTab from './components/ProfilTab'
 import AnalyseTab from './components/AnalyseTab'
 import PlanTab from './components/PlanTab'
 import WorkoutTab from './components/WorkoutTab'
+import ZieleTab from './components/ZieleTab'
 import WorkoutModus from './components/WorkoutModus'
 import { useWochenplan } from './components/useWochenplan'
 
@@ -20,6 +21,7 @@ const TAB_TITEL: Record<Tab, string> = {
   katalog: 'Katalog',
   plan: 'Wochenplan',
   workout: 'Workout',
+  ziele: 'Ziele',
   analyse: 'Analyse',
   profil: 'Profil',
 }
@@ -111,6 +113,7 @@ function App() {
         )}
         {tab === 'plan' && <PlanTab onStart={starteTag} />}
         {tab === 'workout' && <WorkoutTab onStart={starteAusWorkoutTab} />}
+        {tab === 'ziele' && <ZieleTab />}
         {tab === 'analyse' && <AnalyseTab />}
         {tab === 'profil' && <ProfilTab />}
       </main>

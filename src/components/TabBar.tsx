@@ -1,4 +1,4 @@
-export type Tab = 'katalog' | 'plan' | 'workout' | 'analyse' | 'profil'
+export type Tab = 'katalog' | 'plan' | 'workout' | 'ziele' | 'analyse' | 'profil'
 
 const TABS: { id: Tab; label: string; aktivKlasse: string; icon: React.ReactNode }[] = [
   {
@@ -30,6 +30,18 @@ const TABS: { id: Tab; label: string; aktivKlasse: string; icon: React.ReactNode
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
         <path d="M10 8.5l5 3.5-5 3.5z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'ziele',
+    label: 'Ziele',
+    aktivKlasse: 'text-neon-violet',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="12" cy="12" r="1" />
       </svg>
     ),
   },
