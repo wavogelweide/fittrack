@@ -5,6 +5,7 @@ import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
 import type { CardioTypeId } from '../db/types'
 import { arbeitsgewicht, einRMProUebung, ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
+import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
 import {
   entwurfZuLog,
   formatiereSekunden,
@@ -217,12 +218,14 @@ function CardioKarte({
   onUpdate: (c: WorkoutEntwurf['cardio']) => void
 }) {
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const zone = ga1Zone(profil ?? {})
   const [runden, setRunden] = useState(8)
   const timer = useSekundenTimer()
   const vorherigePhase = useRef<string>('belastung')
 
   const status = intervallStatus(timer.vergangenSek, runden)
+  const tempo = empfohlenesIntervallTempo(logs, cardio.cardioType)
 
   // Signal beim Phasenwechsel (60/120-Intervalle)
   useEffect(() => {
@@ -374,10 +377,36 @@ function CardioKarte({
           <p className="text-6xl font-bold tabular-nums text-txt">
             {formatiereSekunden(status.verbleibendSek)}
           </p>
+          {tempo && status.phase !== 'fertig' && (
+            <p className="mt-1 text-lg font-semibold">
+              <span className={status.phase === 'belastung' ? 'text-warn' : 'text-neon-cyan'}>
+                Ziel{' '}
+                {formatiereTempoBereich(
+                  status.phase === 'belastung' ? tempo.belastung : tempo.erholung,
+                )}
+              </span>
+            </p>
+          )}
           <p className="mt-1 text-xs text-muted">
             Gesamt verbleibend {formatiereSekunden(status.gesamtVerbleibendSek)} · Signal beim
             Wechsel
           </p>
+          {tempo ? (
+            <p className="mt-3 rounded-xl border border-line bg-elev p-2.5 text-xs leading-relaxed text-txt3">
+              Dein Tempo: Belastung{' '}
+              <span className="font-semibold text-warn">{formatiereTempoBereich(tempo.belastung)}</span>
+              {' · '}Erholung{' '}
+              <span className="font-semibold text-neon-cyan">{formatiereTempoBereich(tempo.erholung)}</span>
+              <span className="block text-muted">
+                berechnet aus deinem Durchschnitt der letzten Einheiten ({kg(tempo.basisKmh)} km/h)
+              </span>
+            </p>
+          ) : (
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Protokolliere Einheiten mit Dauer und Distanz auf diesem Gerät, um berechnete
+              Belastungs- und Erholungstempi zu sehen.
+            </p>
+          )}
         </div>
       )}
 

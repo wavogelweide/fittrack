@@ -3,6 +3,7 @@ import { db } from '../db/db'
 import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchExercise } from '../db/types'
 import { ga1Zone } from '../logic/puls'
+import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
 import Chip from './Chip'
 import ExerciseIllustration from './ExerciseIllustration'
 import MaxGewicht from './MaxGewicht'
@@ -83,7 +84,9 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
 
 function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const zone = ga1Zone(profil ?? {})
+  const tempo = empfohlenesIntervallTempo(logs, geraet.id)
   return (
     <>
       <h2 className="text-3xl font-bold tracking-tight">{geraet.name}</h2>
@@ -122,8 +125,25 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
             <p className="font-semibold text-neon-cyan">60/120-Intervalle</p>
             <p className="mt-1 text-sm leading-relaxed text-txt2">
               Nach dem Aufwärmen 6–10 Runden: 60 Sekunden hohe Belastung, 120 Sekunden lockere
-              Erholung. Intervall-Timer folgt im Workout-Modus.
+              Erholung. Der Intervall-Timer läuft im Workout-Modus.
             </p>
+            {tempo ? (
+              <p className="mt-2 text-sm leading-relaxed text-txt2">
+                Dein Tempo: Belastung{' '}
+                <span className="font-bold text-warn">{formatiereTempoBereich(tempo.belastung)}</span>
+                {' · '}Erholung{' '}
+                <span className="font-bold text-neon-cyan">{formatiereTempoBereich(tempo.erholung)}</span>
+                <span className="block text-xs text-muted">
+                  aus deinem Durchschnittstempo der letzten Einheiten (
+                  {tempo.basisKmh.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h)
+                </span>
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-muted">
+                Protokolliere Einheiten mit Dauer und Distanz, um deine berechneten Intervall-Tempi
+                zu sehen.
+              </p>
+            )}
           </div>
         </div>
       </Abschnitt>
