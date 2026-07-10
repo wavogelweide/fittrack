@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
+import { initTheme } from './components/theme'
+
+// Theme vor dem ersten Render anwenden, damit nichts aufblitzt
+initTheme()
 
 registerSW({ immediate: true })
 

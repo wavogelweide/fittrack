@@ -16,11 +16,11 @@ function KatalogKarte({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur-md transition-transform active:scale-[0.98]"
+      className="flex w-full items-center gap-3 rounded-2xl border border-line bg-elev p-4 text-left backdrop-blur-md transition-transform active:scale-[0.98]"
     >
       {thumb}
       <div className="min-w-0 flex-1">{children}</div>
-      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-faint" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 6l6 6-6 6" />
       </svg>
     </button>
@@ -28,7 +28,7 @@ function KatalogKarte({
 }
 
 function KeineTreffer() {
-  return <p className="py-10 text-center text-gray-500">Keine Treffer.</p>
+  return <p className="py-10 text-center text-muted">Keine Treffer.</p>
 }
 
 export function KraftListe({
@@ -48,7 +48,7 @@ export function KraftListe({
           thumb={<ExerciseIllustration klein illustrationId={u.illustrationId} name={u.name} />}
         >
           <p className="font-semibold">{u.name}</p>
-          <p className="mt-0.5 truncate text-sm text-gray-500">{u.maschine}</p>
+          <p className="mt-0.5 truncate text-sm text-muted">{u.maschine}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {u.primaerMuskeln.map((m) => (
               <Chip key={m} text={MUSKEL_LABELS[m]} farbe="lime" />
@@ -77,7 +77,7 @@ export function CardioListe({
           thumb={<ExerciseIllustration klein illustrationId={g.illustrationId} name={g.name} />}
         >
           <p className="font-semibold">{g.name}</p>
-          <p className="mt-0.5 line-clamp-2 text-sm text-gray-500">{g.beschreibung}</p>
+          <p className="mt-0.5 line-clamp-2 text-sm text-muted">{g.beschreibung}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             <Chip text="GA1" farbe="cyan" />
             <Chip text="60/120-Intervalle" farbe="cyan" />
@@ -114,8 +114,8 @@ export function DehnListe({
             className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
               art === f.id
                 ? 'border-neon-violet/50 bg-neon-violet/10 text-neon-violet'
-                : 'border-white/10 bg-white/5 text-gray-400'
-            }`}
+                : 'border-line bg-elev text-txt3'
+           }`}
           >
             {f.label}
           </button>
@@ -132,7 +132,7 @@ export function DehnListe({
               thumb={<ExerciseIllustration klein illustrationId={u.illustrationId} name={u.name} />}
             >
               <p className="font-semibold">{u.name}</p>
-              <p className="mt-0.5 text-sm text-gray-500">
+              <p className="mt-0.5 text-sm text-muted">
                 {ART_LABELS[u.art]} · {u.halteDauerSek} Sek.
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">

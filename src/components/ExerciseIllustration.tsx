@@ -22,20 +22,20 @@ export default function ExerciseIllustration({
         src={url}
         alt=""
         aria-hidden="true"
-        className="h-16 w-16 shrink-0 rounded-xl bg-white/[0.04]"
+        className="h-16 w-16 shrink-0 rounded-xl bg-illu"
         draggable={false}
       />
     ) : null
   }
   if (!url) {
     return (
-      <div className="flex aspect-square items-center justify-center rounded-xl border border-dashed border-white/15 text-sm text-gray-600">
+      <div className="flex aspect-square items-center justify-center rounded-xl border border-dashed border-line-strong text-sm text-faint">
         Keine Illustration vorhanden
       </div>
     )
   }
   return (
-    <div className="rounded-xl bg-white/[0.04] p-2">
+    <div className="rounded-xl bg-illu p-2">
       <img
         src={url}
         alt={`Illustration: ${name}`}

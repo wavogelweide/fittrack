@@ -1,20 +1,98 @@
 @import "tailwindcss";
 
-@theme {
-  --color-surface: #0a0e14;
-  --color-card: #121826;
-  --color-neon-cyan: #22d3ee;
-  --color-neon-lime: #a3e635;
-  --color-neon-violet: #a78bfa;
+/* Design-Tokens nach Abschnitt 5b des Plans: Dark Mode ist Standard,
+   html.light überschreibt die Werte (Umschalter im Profil-Tab). */
+:root {
+  color-scheme: dark;
+  --surface: #0a0e14;
+  --elev: rgba(255, 255, 255, 0.05); /* Glas-Karten */
+  --elev2: rgba(255, 255, 255, 0.11); /* gedrückt / hervorgehoben */
+  --elev-solid: #121826; /* deckende Flächen (Tooltips) */
+  --illu: rgba(255, 255, 255, 0.04); /* Illustrations-Kacheln */
+  --hairline: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --txt: #f3f4f6;
+  --txt2: #d1d5db;
+  --txt3: #9ca3af;
+  --muted: #6b7280;
+  --faint: #4b5563;
+  --on-accent: #0a0e14; /* Text auf Akzentflächen */
+  --neon-cyan: #22d3ee;
+  --neon-lime: #a3e635;
+  --neon-violet: #a78bfa;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --chart-axis: #6b7280;
+  --chart-grid: #374151;
+}
+
+html.light {
+  color-scheme: light;
+  --surface: #eef1f6;
+  --elev: rgba(255, 255, 255, 0.78);
+  --elev2: rgba(15, 23, 42, 0.07);
+  --elev-solid: #ffffff;
+  --illu: #121826; /* Strichfiguren sind hell – Kachel bleibt dunkel */
+  --hairline: rgba(15, 23, 42, 0.07);
+  --line: rgba(15, 23, 42, 0.12);
+  --line-strong: rgba(15, 23, 42, 0.26);
+  --txt: #0f172a;
+  --txt2: #334155;
+  --txt3: #475569;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --on-accent: #ffffff;
+  --neon-cyan: #0e7490;
+  --neon-lime: #4d7c0f;
+  --neon-violet: #6d28d9;
+  --ok: #059669;
+  --warn: #b45309;
+  --danger: #dc2626;
+  --chart-axis: #64748b;
+  --chart-grid: #cbd5e1;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-card: var(--elev-solid);
+  --color-elev: var(--elev);
+  --color-elev2: var(--elev2);
+  --color-illu: var(--illu);
+  --color-hairline: var(--hairline);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-txt: var(--txt);
+  --color-txt2: var(--txt2);
+  --color-txt3: var(--txt3);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-onaccent: var(--on-accent);
+  --color-neon-cyan: var(--neon-cyan);
+  --color-neon-lime: var(--neon-lime);
+  --color-neon-violet: var(--neon-violet);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
 }
 
 html,
 body {
-  background-color: var(--color-surface);
-  color: #e5e7eb;
+  background-color: var(--surface);
+  color: var(--txt);
   min-height: 100dvh;
   /* iOS-Safe-Areas */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Im hellen Modus tragen weiche Schatten die Kartenhierarchie
+   (im Dunkeln übernehmen das die 1-px-Ränder mit Glow) */
+html.light .backdrop-blur-md,
+html.light .backdrop-blur-lg {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 16px rgba(15, 23, 42, 0.06);
 }
