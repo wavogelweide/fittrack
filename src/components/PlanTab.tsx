@@ -1,11 +1,7 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/db'
 import { DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
-import { berechneRatios, bewerteHaltung } from '../logic/analyse'
-import { einRMProUebung } from '../logic/einRM'
-import { ga1Zone } from '../logic/puls'
-import { erstelleWochenplan, type KraftVorschlag, type TrainingsTag } from '../logic/vorschlag'
+import type { KraftVorschlag, TrainingsTag } from '../logic/vorschlag'
 import ExerciseIllustration from './ExerciseIllustration'
+import { useWochenplan } from './useWochenplan'
 
 const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
@@ -54,7 +50,7 @@ function KraftZeile({ vorschlag }: { vorschlag: KraftVorschlag }) {
   )
 }
 
-function TagKarte({ tag }: { tag: TrainingsTag }) {
+function TagKarte({ tag, onStart }: { tag: TrainingsTag; onStart: (tag: TrainingsTag) => void }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
       <div className="flex items-baseline gap-3">
@@ -91,25 +87,19 @@ function TagKarte({ tag }: { tag: TrainingsTag }) {
           )
         })}
       </ul>
+
+      <button
+        onClick={() => onStart(tag)}
+        className="mt-4 h-12 w-full rounded-xl border border-neon-cyan/40 bg-neon-cyan/10 font-semibold text-neon-cyan active:bg-neon-cyan/20"
+      >
+        Training starten
+      </button>
     </div>
   )
 }
 
-export default function PlanTab() {
-  const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
-  const profil = useLiveQuery(() => db.userProfile.get(1), [])
-
-  const einRMs = einRMProUebung(maxWeights)
-  const ratios = berechneRatios(einRMs)
-  const muster = bewerteHaltung(ratios, profil?.selbstcheck)
-  const plan = erstelleWochenplan({
-    einRMs,
-    ratios,
-    muster,
-    trainingsziel: profil?.trainingsziel ?? 'hypertrophie',
-    trainingstageProWoche: profil?.trainingstageProWoche ?? 3,
-    ga1Zone: ga1Zone(profil ?? {}),
-  })
+export default function PlanTab({ onStart }: { onStart: (tag: TrainingsTag) => void }) {
+  const { plan } = useWochenplan()
 
   return (
     <div className="space-y-4">
@@ -127,7 +117,7 @@ export default function PlanTab() {
       )}
 
       {plan.tage.map((t) => (
-        <TagKarte key={t.nr} tag={t} />
+        <TagKarte key={t.nr} tag={t} onStart={onStart} />
       ))}
 
       <p className="px-1 pb-2 text-xs leading-relaxed text-gray-600">
