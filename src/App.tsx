@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db/db'
-import { CARDIO_GERAETE } from './db/seed'
+import { CARDIO_GERAETE, DEHN_UEBUNGEN } from './db/seed'
 import { filtereCardio, filtereDehnen, filtereKraft } from './logic/katalog'
+import type { TrainingsTag } from './logic/vorschlag'
+import { entwurfAusTag, leererEntwurf, type WorkoutEntwurf } from './logic/workout'
 import TabBar, { type Tab } from './components/TabBar'
 import SuchFeld from './components/SuchFeld'
 import DetailAnsicht, { type Auswahl } from './components/DetailAnsicht'
@@ -10,27 +12,52 @@ import { CardioListe, DehnListe, KraftListe } from './components/KatalogListen'
 import ProfilTab from './components/ProfilTab'
 import AnalyseTab from './components/AnalyseTab'
 import PlanTab from './components/PlanTab'
+import WorkoutTab from './components/WorkoutTab'
+import ZieleTab from './components/ZieleTab'
+import WorkoutModus from './components/WorkoutModus'
+import { useWochenplan } from './components/useWochenplan'
 
 const TAB_TITEL: Record<Tab, string> = {
-  kraft: 'Kraftübungen',
-  cardio: 'Cardio-Geräte',
-  dehnen: 'Dehnen & Blackroll',
+  katalog: 'Katalog',
   plan: 'Wochenplan',
+  workout: 'Workout',
+  ziele: 'Ziele',
   analyse: 'Analyse',
   profil: 'Profil',
 }
 
+type KatalogArt = 'kraft' | 'cardio' | 'dehnen'
+
+const KATALOG_ARTEN: { id: KatalogArt; label: string; aktivKlasse: string }[] = [
+  { id: 'kraft', label: 'Kraft', aktivKlasse: 'border-neon-lime/50 bg-neon-lime/10 text-neon-lime' },
+  { id: 'cardio', label: 'Cardio', aktivKlasse: 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan' },
+  { id: 'dehnen', label: 'Dehnen', aktivKlasse: 'border-neon-violet/50 bg-neon-violet/10 text-neon-violet' },
+]
+
+const HALTE_DAUER = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u.halteDauerSek]))
+
 function App() {
-  const [tab, setTab] = useState<Tab>('kraft')
+  const [tab, setTab] = useState<Tab>('katalog')
+  const [katalogArt, setKatalogArt] = useState<KatalogArt>('kraft')
   const [suche, setSuche] = useState('')
   const [auswahl, setAuswahl] = useState<Auswahl | null>(null)
+  const [workout, setWorkout] = useState<{ titel: string; entwurf: WorkoutEntwurf } | null>(null)
 
   const kraft = useLiveQuery(() => db.exercises.orderBy('name').toArray(), []) ?? []
   const dehnen = useLiveQuery(() => db.stretches.orderBy('name').toArray(), []) ?? []
+  const { plan } = useWochenplan()
 
   const wechsleTab = (t: Tab) => {
     setTab(t)
     setSuche('')
+  }
+
+  const starteTag = (tag: TrainingsTag) =>
+    setWorkout({ titel: `Tag ${tag.nr} · ${tag.name}`, entwurf: entwurfAusTag(tag, HALTE_DAUER) })
+
+  const starteAusWorkoutTab = (titel: string, planTagNr: number | null) => {
+    const tag = planTagNr !== null ? plan.tage.find((t) => t.nr === planTagNr) : undefined
+    setWorkout({ titel, entwurf: tag ? entwurfAusTag(tag, HALTE_DAUER) : leererEntwurf() })
   }
 
   return (
@@ -40,33 +67,53 @@ function App() {
           Fit<span className="text-neon-cyan">Track</span>
           <span className="ml-3 text-base font-medium text-gray-400">{TAB_TITEL[tab]}</span>
         </h1>
-        {tab !== 'profil' && tab !== 'analyse' && tab !== 'plan' && (
-          <div className="mt-3">
-            <SuchFeld wert={suche} onChange={setSuche} />
-          </div>
+        {tab === 'katalog' && (
+          <>
+            <div className="mt-3 flex gap-2">
+              {KATALOG_ARTEN.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => {
+                    setKatalogArt(a.id)
+                    setSuche('')
+                  }}
+                  className={`h-10 flex-1 rounded-xl border text-sm font-medium transition-colors ${
+                    katalogArt === a.id ? a.aktivKlasse : 'border-white/10 bg-white/5 text-gray-400'
+                  }`}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3">
+              <SuchFeld wert={suche} onChange={setSuche} />
+            </div>
+          </>
         )}
       </header>
 
       <main className="mt-3">
-        {tab === 'kraft' && (
+        {tab === 'katalog' && katalogArt === 'kraft' && (
           <KraftListe
             uebungen={filtereKraft(kraft, suche)}
             onAuswahl={(u) => setAuswahl({ typ: 'kraft', uebung: u })}
           />
         )}
-        {tab === 'cardio' && (
+        {tab === 'katalog' && katalogArt === 'cardio' && (
           <CardioListe
             geraete={filtereCardio(CARDIO_GERAETE, suche)}
             onAuswahl={(g) => setAuswahl({ typ: 'cardio', geraet: g })}
           />
         )}
-        {tab === 'dehnen' && (
+        {tab === 'katalog' && katalogArt === 'dehnen' && (
           <DehnListe
             uebungen={filtereDehnen(dehnen, suche)}
             onAuswahl={(u) => setAuswahl({ typ: 'dehnen', uebung: u })}
           />
         )}
-        {tab === 'plan' && <PlanTab />}
+        {tab === 'plan' && <PlanTab onStart={starteTag} />}
+        {tab === 'workout' && <WorkoutTab onStart={starteAusWorkoutTab} />}
+        {tab === 'ziele' && <ZieleTab />}
         {tab === 'analyse' && <AnalyseTab />}
         {tab === 'profil' && <ProfilTab />}
       </main>
@@ -74,6 +121,13 @@ function App() {
       <TabBar tab={tab} onChange={wechsleTab} />
 
       {auswahl && <DetailAnsicht auswahl={auswahl} onClose={() => setAuswahl(null)} />}
+      {workout && (
+        <WorkoutModus
+          titel={workout.titel}
+          start={workout.entwurf}
+          onClose={() => setWorkout(null)}
+        />
+      )}
     </div>
   )
 }

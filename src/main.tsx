@@ -6,6 +6,10 @@ import App from './App.tsx'
 
 registerSW({ immediate: true })
 
+// Persistenten Speicher anfordern, damit iOS die IndexedDB nicht bei
+// Platzmangel löscht (Phase 7); Status wird im Profil-Tab angezeigt
+void navigator.storage?.persist?.()
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

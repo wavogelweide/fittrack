@@ -3,6 +3,7 @@ import { db } from '../db/db'
 import type { Trainingsziel, UserProfile } from '../db/types'
 import { ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
+import Datensicherung from './Datensicherung'
 
 const STANDARD: Omit<UserProfile, 'id'> = { trainingsziel: 'hypertrophie', trainingstageProWoche: 3 }
 
@@ -144,6 +145,8 @@ export default function ProfilTab() {
           Trage dein Alter ein, um deine persönliche GA1-Pulszone zu sehen.
         </p>
       )}
+
+      <Datensicherung />
     </div>
   )
 }

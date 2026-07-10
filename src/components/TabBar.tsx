@@ -1,34 +1,13 @@
-export type Tab = 'kraft' | 'cardio' | 'dehnen' | 'plan' | 'analyse' | 'profil'
+export type Tab = 'katalog' | 'plan' | 'workout' | 'ziele' | 'analyse' | 'profil'
 
 const TABS: { id: Tab; label: string; aktivKlasse: string; icon: React.ReactNode }[] = [
   {
-    id: 'kraft',
-    label: 'Kraft',
+    id: 'katalog',
+    label: 'Katalog',
     aktivKlasse: 'text-neon-lime',
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M4 9v6M7 6.5v11M17 6.5v11M20 9v6M7 12h10" />
-      </svg>
-    ),
-  },
-  {
-    id: 'cardio',
-    label: 'Cardio',
-    aktivKlasse: 'text-neon-cyan',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 12h4l2-5 4 10 2-5h6" />
-      </svg>
-    ),
-  },
-  {
-    id: 'dehnen',
-    label: 'Dehnen',
-    aktivKlasse: 'text-neon-violet',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <circle cx="12" cy="4.5" r="2" />
-        <path d="M12 7.5v5m0 0c0 3-5 4-5 9m5-9c0 3 5 4 5 9M5.5 10.5 12 12l6.5-1.5" />
       </svg>
     ),
   },
@@ -40,6 +19,29 @@ const TABS: { id: Tab; label: string; aktivKlasse: string; icon: React.ReactNode
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="5" width="16" height="15" rx="2" />
         <path d="M8 3v4M16 3v4M4 10h16M8.5 14.5l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    id: 'workout',
+    label: 'Workout',
+    aktivKlasse: 'text-neon-cyan',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M10 8.5l5 3.5-5 3.5z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'ziele',
+    label: 'Ziele',
+    aktivKlasse: 'text-neon-violet',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="12" cy="12" r="1" />
       </svg>
     ),
   },
