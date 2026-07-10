@@ -9,11 +9,13 @@ import DetailAnsicht, { type Auswahl } from './components/DetailAnsicht'
 import { CardioListe, DehnListe, KraftListe } from './components/KatalogListen'
 import ProfilTab from './components/ProfilTab'
 import AnalyseTab from './components/AnalyseTab'
+import PlanTab from './components/PlanTab'
 
 const TAB_TITEL: Record<Tab, string> = {
   kraft: 'Kraftübungen',
   cardio: 'Cardio-Geräte',
   dehnen: 'Dehnen & Blackroll',
+  plan: 'Wochenplan',
   analyse: 'Analyse',
   profil: 'Profil',
 }
@@ -38,7 +40,7 @@ function App() {
           Fit<span className="text-neon-cyan">Track</span>
           <span className="ml-3 text-base font-medium text-gray-400">{TAB_TITEL[tab]}</span>
         </h1>
-        {tab !== 'profil' && tab !== 'analyse' && (
+        {tab !== 'profil' && tab !== 'analyse' && tab !== 'plan' && (
           <div className="mt-3">
             <SuchFeld wert={suche} onChange={setSuche} />
           </div>
@@ -64,6 +66,7 @@ function App() {
             onAuswahl={(u) => setAuswahl({ typ: 'dehnen', uebung: u })}
           />
         )}
+        {tab === 'plan' && <PlanTab />}
         {tab === 'analyse' && <AnalyseTab />}
         {tab === 'profil' && <ProfilTab />}
       </main>
