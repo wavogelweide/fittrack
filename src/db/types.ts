@@ -110,6 +110,17 @@ export interface WorkoutLog {
 
 export type Trainingsziel = 'kraft' | 'hypertrophie' | 'kraftausdauer'
 
+// Haltungs-Selbstcheck (Abschnitt 5.2b) – ergänzt die Kraft-Ratios,
+// damit die Haltungsanalyse auch ohne vollständige Maximalgewichte funktioniert
+export interface SelbstcheckAntworten {
+  sitzStundenProTag?: number
+  wandtestKopfErreichtWand?: 'ja' | 'nein'
+  schulternFallenVorn?: 'ja' | 'nein'
+  beckenKipptVorn?: 'ja' | 'nein'
+  nackenVerspannungen?: 'ja' | 'nein'
+  lwsBeschwerden?: 'ja' | 'nein'
+}
+
 export interface UserProfile {
   id: number
   alter?: number
@@ -118,6 +129,7 @@ export interface UserProfile {
   maxPuls?: number
   trainingsziel: Trainingsziel
   trainingstageProWoche: number
+  selbstcheck?: SelbstcheckAntworten & { datum: string }
 }
 
 export interface Goal {

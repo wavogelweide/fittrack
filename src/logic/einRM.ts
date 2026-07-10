@@ -57,6 +57,18 @@ export function arbeitsgewicht(
 
 // 1RM aus dem jüngsten Eintrag des Verlaufs (nie nur den letzten Wert speichern –
 // der Verlauf bleibt erhalten, bewertet wird der aktuellste)
+// Aktuellstes 1RM je Übung aus dem gesamten Maximalgewicht-Verlauf
+export function einRMProUebung(eintraege: MaxWeight[]): Record<string, number> {
+  const proUebung: Record<string, MaxWeight[]> = {}
+  for (const e of eintraege) (proUebung[e.exerciseId] ??= []).push(e)
+  const ergebnis: Record<string, number> = {}
+  for (const [exerciseId, liste] of Object.entries(proUebung)) {
+    const einRM = aktuellster1RM(liste)
+    if (einRM !== null) ergebnis[exerciseId] = einRM
+  }
+  return ergebnis
+}
+
 export function aktuellster1RM(eintraege: MaxWeight[]): number | null {
   if (eintraege.length === 0) return null
   const neuester = [...eintraege].sort(
