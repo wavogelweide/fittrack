@@ -15,12 +15,11 @@ import PlanTab from './components/PlanTab'
 import WorkoutTab from './components/WorkoutTab'
 import ZieleTab from './components/ZieleTab'
 import WorkoutModus from './components/WorkoutModus'
-import { useWochenplan } from './components/useWochenplan'
 
 const TAB_TITEL: Record<Tab, string> = {
+  plan: 'Trainingsplan',
   katalog: 'Katalog',
-  plan: 'Wochenplan',
-  workout: 'Workout',
+  workout: 'Historie',
   ziele: 'Ziele',
   analyse: 'Analyse',
   profil: 'Profil',
@@ -37,7 +36,7 @@ const KATALOG_ARTEN: { id: KatalogArt; label: string; aktivKlasse: string }[] = 
 const HALTE_DAUER = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u.halteDauerSek]))
 
 function App() {
-  const [tab, setTab] = useState<Tab>('katalog')
+  const [tab, setTab] = useState<Tab>('plan')
   const [katalogArt, setKatalogArt] = useState<KatalogArt>('kraft')
   const [suche, setSuche] = useState('')
   const [auswahl, setAuswahl] = useState<Auswahl | null>(null)
@@ -45,7 +44,6 @@ function App() {
 
   const kraft = useLiveQuery(() => db.exercises.orderBy('name').toArray(), []) ?? []
   const dehnen = useLiveQuery(() => db.stretches.orderBy('name').toArray(), []) ?? []
-  const { plan } = useWochenplan()
 
   const wechsleTab = (t: Tab) => {
     setTab(t)
@@ -55,17 +53,15 @@ function App() {
   const starteTag = (tag: TrainingsTag) =>
     setWorkout({ titel: `Tag ${tag.nr} · ${tag.name}`, entwurf: entwurfAusTag(tag, HALTE_DAUER) })
 
-  const starteAusWorkoutTab = (titel: string, planTagNr: number | null) => {
-    const tag = planTagNr !== null ? plan.tage.find((t) => t.nr === planTagNr) : undefined
-    setWorkout({ titel, entwurf: tag ? entwurfAusTag(tag, HALTE_DAUER) : leererEntwurf() })
-  }
+  const starteFreiesWorkout = () =>
+    setWorkout({ titel: 'Freies Workout', entwurf: leererEntwurf() })
 
   return (
     <div className="mx-auto min-h-dvh max-w-lg px-4 pb-28">
       <header className="sticky top-0 z-30 -mx-4 bg-surface/80 px-4 pb-3 pt-4 backdrop-blur-lg">
         <h1 className="text-2xl font-bold tracking-tight">
           Fit<span className="text-neon-cyan">Track</span>
-          <span className="ml-3 text-base font-medium text-gray-400">{TAB_TITEL[tab]}</span>
+          <span className="ml-3 text-base font-medium text-txt3">{TAB_TITEL[tab]}</span>
         </h1>
         {tab === 'katalog' && (
           <>
@@ -78,8 +74,8 @@ function App() {
                     setSuche('')
                   }}
                   className={`h-10 flex-1 rounded-xl border text-sm font-medium transition-colors ${
-                    katalogArt === a.id ? a.aktivKlasse : 'border-white/10 bg-white/5 text-gray-400'
-                  }`}
+                    katalogArt === a.id ? a.aktivKlasse : 'border-line bg-elev text-txt3'
+                 }`}
                 >
                   {a.label}
                 </button>
@@ -111,8 +107,8 @@ function App() {
             onAuswahl={(u) => setAuswahl({ typ: 'dehnen', uebung: u })}
           />
         )}
-        {tab === 'plan' && <PlanTab onStart={starteTag} />}
-        {tab === 'workout' && <WorkoutTab onStart={starteAusWorkoutTab} />}
+        {tab === 'plan' && <PlanTab onStart={starteTag} onFreiesWorkout={starteFreiesWorkout} />}
+        {tab === 'workout' && <WorkoutTab />}
         {tab === 'ziele' && <ZieleTab />}
         {tab === 'analyse' && <AnalyseTab />}
         {tab === 'profil' && <ProfilTab />}

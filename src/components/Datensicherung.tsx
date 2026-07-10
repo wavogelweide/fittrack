@@ -99,11 +99,11 @@ export default function Datensicherung() {
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+    <section className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">
         Datensicherung & Speicher
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-gray-400">
+      <p className="mt-2 text-sm leading-relaxed text-txt3">
         Deine Daten liegen nur auf diesem Gerät. iOS kann den Speicher bei Platzmangel leeren –
         sichere deshalb regelmäßig ein Backup.
       </p>
@@ -117,7 +117,7 @@ export default function Datensicherung() {
         </button>
         <button
           onClick={() => dateiInput.current?.click()}
-          className="h-12 rounded-xl border border-white/15 bg-white/5 font-semibold text-gray-200 active:bg-white/10"
+          className="h-12 rounded-xl border border-line-strong bg-elev font-semibold text-txt active:bg-elev2"
         >
           Importieren
         </button>
@@ -138,18 +138,18 @@ export default function Datensicherung() {
         <p
           className={`mt-3 rounded-xl border p-3 text-sm leading-relaxed ${
             meldung.fehler
-              ? 'border-red-400/25 bg-red-400/5 text-red-300'
+              ? 'border-danger/30 bg-danger/10 text-danger'
               : 'border-neon-lime/25 bg-neon-lime/5 text-neon-lime'
-          }`}
+         }`}
         >
           {meldung.text}
         </p>
       )}
 
       <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-        <span className="text-gray-400">Speicherstatus</span>
+        <span className="text-txt3">Speicherstatus</span>
         {persistent === null ? (
-          <span className="text-gray-600">unbekannt</span>
+          <span className="text-faint">unbekannt</span>
         ) : persistent ? (
           <span className="text-neon-lime">✓ dauerhaft</span>
         ) : (
@@ -159,7 +159,7 @@ export default function Datensicherung() {
         )}
       </div>
       {speicher && speicher.quota > 0 && (
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-muted">
           Belegt: {formatiereBytes(speicher.usage)} von {formatiereBytes(speicher.quota)}
         </p>
       )}

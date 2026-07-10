@@ -1,9 +1,46 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import type { Trainingsziel, UserProfile } from '../db/types'
 import { ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
 import Datensicherung from './Datensicherung'
+import { gespeicherteWahl, setzeTheme, type ThemeWahl } from './theme'
+
+const THEME_OPTIONEN: { id: ThemeWahl; label: string }[] = [
+  { id: 'dunkel', label: 'Dunkel' },
+  { id: 'hell', label: 'Hell' },
+  { id: 'system', label: 'System' },
+]
+
+function ThemeWahlSektion() {
+  const [wahl, setWahl] = useState<ThemeWahl>(gespeicherteWahl)
+  return (
+    <section className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
+        Darstellung
+      </h2>
+      <div className="flex gap-2">
+        {THEME_OPTIONEN.map((o) => (
+          <button
+            key={o.id}
+            onClick={() => {
+              setzeTheme(o.id)
+              setWahl(o.id)
+            }}
+            className={`h-12 flex-1 rounded-xl border text-sm font-medium transition-colors ${
+              wahl === o.id
+                ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
+                : 'border-line bg-elev text-txt3'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 const STANDARD: Omit<UserProfile, 'id'> = { trainingsziel: 'hypertrophie', trainingstageProWoche: 3 }
 
@@ -22,7 +59,7 @@ function ZahlenFeld({
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-gray-400">{label}</span>
+      <span className="text-sm text-txt3">{label}</span>
       <div className="mt-1 flex items-center gap-2">
         <input
           type="number"
@@ -34,9 +71,9 @@ function ZahlenFeld({
             const n = e.target.valueAsNumber
             onChange(Number.isFinite(n) && n > 0 ? n : undefined)
           }}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-lg text-gray-100 placeholder-gray-600 outline-none focus:border-white/25"
+          className="w-full rounded-xl border border-line bg-elev px-4 py-3 text-lg text-txt placeholder-faint outline-none focus:border-line-strong"
         />
-        <span className="w-12 shrink-0 text-sm text-gray-500">{einheit}</span>
+        <span className="w-12 shrink-0 text-sm text-muted">{einheit}</span>
       </div>
     </label>
   )
@@ -53,8 +90,10 @@ export default function ProfilTab() {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+      <ThemeWahlSektion />
+
+      <section className="space-y-4 rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">
           Körperdaten
         </h2>
         <ZahlenFeld
@@ -78,8 +117,8 @@ export default function ProfilTab() {
         />
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
+      <section className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
           Trainingsziel
         </h2>
         <div className="space-y-2">
@@ -90,8 +129,8 @@ export default function ProfilTab() {
               className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
                 ziel === z
                   ? 'border-neon-lime/50 bg-neon-lime/10 text-neon-lime'
-                  : 'border-white/10 bg-white/5 text-gray-300'
-              }`}
+                  : 'border-line bg-elev text-txt2'
+             }`}
             >
               <span className="font-medium">{ZIEL_KONFIG[z].label}</span>
               <span className="mt-0.5 block text-xs opacity-70">
@@ -103,8 +142,8 @@ export default function ProfilTab() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
+      <section className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
           Trainingstage pro Woche
         </h2>
         <div className="flex gap-2">
@@ -115,8 +154,8 @@ export default function ProfilTab() {
               className={`h-14 flex-1 rounded-xl border text-xl font-bold transition-colors ${
                 tage === t
                   ? 'border-neon-lime/50 bg-neon-lime/10 text-neon-lime'
-                  : 'border-white/10 bg-white/5 text-gray-300'
-              }`}
+                  : 'border-line bg-elev text-txt2'
+             }`}
             >
               {t}
             </button>
@@ -133,15 +172,15 @@ export default function ProfilTab() {
             <span className="text-5xl font-bold text-neon-cyan">
               {zone.von}–{zone.bis}
             </span>
-            <span className="ml-2 text-gray-400">bpm</span>
+            <span className="ml-2 text-txt3">bpm</span>
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-gray-400">
+          <p className="mt-2 text-sm leading-relaxed text-txt3">
             60–75 % {profil?.ruhePuls ? 'der Herzfrequenzreserve (Karvonen)' : 'der maximalen Herzfrequenz'} bei
             HFmax {zone.hfMax} bpm.
           </p>
         </section>
       ) : (
-        <p className="px-1 text-sm text-gray-500">
+        <p className="px-1 text-sm text-muted">
           Trage dein Alter ein, um deine persönliche GA1-Pulszone zu sehen.
         </p>
       )}

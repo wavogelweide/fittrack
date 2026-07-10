@@ -14,10 +14,10 @@ import {
 const UEBUNGS_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 
 const AMPEL: Record<AmpelStatus, { punkt: string; label: string; text: string }> = {
-  ok: { punkt: 'bg-emerald-400', label: 'ok', text: 'text-emerald-400' },
-  leicht: { punkt: 'bg-amber-400', label: 'leicht', text: 'text-amber-400' },
-  deutlich: { punkt: 'bg-red-400', label: 'deutlich', text: 'text-red-400' },
-  fehlend: { punkt: 'bg-gray-600', label: 'Daten fehlen', text: 'text-gray-500' },
+  ok: { punkt: 'bg-ok', label: 'ok', text: 'text-ok' },
+  leicht: { punkt: 'bg-warn', label: 'leicht', text: 'text-warn' },
+  deutlich: { punkt: 'bg-danger', label: 'deutlich', text: 'text-danger' },
+  fehlend: { punkt: 'bg-faint', label: 'Daten fehlen', text: 'text-muted' },
 }
 
 const zahl = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 2 })
@@ -26,7 +26,7 @@ function RatioKarte({ ergebnis }: { ergebnis: RatioErgebnis }) {
   const a = AMPEL[ergebnis.status]
   const k = ergebnis.konfig
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+    <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
       <div className="flex items-center justify-between gap-3">
         <p className="font-semibold">{k.name}</p>
         <span className={`flex shrink-0 items-center gap-2 text-sm font-medium ${a.text}`}>
@@ -35,21 +35,21 @@ function RatioKarte({ ergebnis }: { ergebnis: RatioErgebnis }) {
         </span>
       </div>
       {ergebnis.status === 'fehlend' ? (
-        <p className="mt-2 text-sm text-gray-400">
+        <p className="mt-2 text-sm text-txt3">
           Für diese Analyse fehlt dein Maximalgewicht:{' '}
-          <span className="text-gray-200">
+          <span className="text-txt">
             {ergebnis.fehlendeExerciseIds.map((id) => UEBUNGS_NAME[id] ?? id).join(', ')}
           </span>
           . Erfasse es im Kraft-Katalog.
         </p>
       ) : (
         <>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted">
             Ratio {zahl(ergebnis.ratio!)} · Richtwert {zahl(k.richtwert[0])}–{zahl(k.richtwert[1])}
             {ergebnis.status !== 'ok' && ` · ${ergebnis.abweichungProzent} % daneben`}
           </p>
           {ergebnis.richtung && (
-            <p className="mt-2 text-sm leading-relaxed text-gray-300">
+            <p className="mt-2 text-sm leading-relaxed text-txt2">
               {ergebnis.richtung === 'zaehler_schwach'
                 ? k.deutungZaehlerSchwach
                 : k.deutungNennerSchwach}
@@ -83,53 +83,53 @@ const STUFEN: Record<
   MusterErgebnis['stufe'],
   { label: string; klasse: string; balken: string }
 > = {
-  unauffaellig: { label: 'unauffällig', klasse: 'text-emerald-400', balken: 'bg-emerald-400' },
-  moeglich: { label: 'möglich', klasse: 'text-amber-400', balken: 'bg-amber-400' },
-  wahrscheinlich: { label: 'wahrscheinlich', klasse: 'text-red-400', balken: 'bg-red-400' },
+  unauffaellig: { label: 'unauffällig', klasse: 'text-ok', balken: 'bg-ok' },
+  moeglich: { label: 'möglich', klasse: 'text-warn', balken: 'bg-warn' },
+  wahrscheinlich: { label: 'wahrscheinlich', klasse: 'text-danger', balken: 'bg-danger' },
 }
 
 function MusterKarte({ ergebnis }: { ergebnis: MusterErgebnis }) {
   const info = MUSTER_INFO[ergebnis.muster]
   const stufe = STUFEN[ergebnis.stufe]
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+    <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-semibold">{info.titel}</p>
-          <p className="text-xs text-gray-500">{info.untertitel}</p>
+          <p className="text-xs text-muted">{info.untertitel}</p>
         </div>
         <span className={`shrink-0 text-sm font-semibold ${stufe.klasse}`}>{stufe.label}</span>
       </div>
 
       {ergebnis.datenlage === 'keine' ? (
-        <p className="mt-3 text-sm text-gray-400">
+        <p className="mt-3 text-sm text-txt3">
           Noch keine Datenbasis: Fülle den Selbstcheck unten aus oder erfasse Maximalgewichte im
           Kraft-Katalog.
         </p>
       ) : (
         <>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-elev2">
             <div
               className={`h-full rounded-full transition-all ${stufe.balken}`}
               style={{ width: `${ergebnis.score}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-gray-500">Muster-Score: {ergebnis.score} / 100</p>
+          <p className="mt-1 text-xs text-muted">Muster-Score: {ergebnis.score} / 100</p>
           {ergebnis.signale.length > 0 && (
-            <ul className="mt-3 space-y-1 text-sm text-gray-300">
+            <ul className="mt-3 space-y-1 text-sm text-txt2">
               {ergebnis.signale.map((s) => (
                 <li key={s} className="flex gap-2">
-                  <span className="text-gray-600">•</span>
+                  <span className="text-faint">•</span>
                   {s}
                 </li>
               ))}
             </ul>
           )}
           {ergebnis.stufe !== 'unauffaellig' && (
-            <p className="mt-3 text-sm leading-relaxed text-gray-400">{info.erklaerung}</p>
+            <p className="mt-3 text-sm leading-relaxed text-txt3">{info.erklaerung}</p>
           )}
           {ergebnis.datenlage === 'nur_selbstcheck' && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-muted">
               Basis: nur Selbstcheck – erfasse Maximalgewichte für eine genauere Einschätzung.
             </p>
           )}
@@ -173,12 +173,12 @@ function Selbstcheck({ profil }: { profil: UserProfile | undefined }) {
     `rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
       aktiv
         ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
-        : 'border-white/10 bg-white/5 text-gray-400'
+        : 'border-line bg-elev text-txt3'
     }`
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-      <p className="text-sm text-gray-300">Wie viele Stunden sitzt du an einem typischen Tag?</p>
+    <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
+      <p className="text-sm text-txt2">Wie viele Stunden sitzt du an einem typischen Tag?</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {SITZ_OPTIONEN.map((o) => (
           <button
@@ -192,8 +192,8 @@ function Selbstcheck({ profil }: { profil: UserProfile | undefined }) {
       </div>
 
       {JA_NEIN_FRAGEN.map((f) => (
-        <div key={f.feld} className="mt-4 border-t border-white/5 pt-4">
-          <p className="text-sm leading-relaxed text-gray-300">{f.frage}</p>
+        <div key={f.feld} className="mt-4 border-t border-hairline pt-4">
+          <p className="text-sm leading-relaxed text-txt2">{f.frage}</p>
           <div className="mt-2 flex gap-2">
             {(['ja', 'nein'] as const).map((antwort) => (
               <button
@@ -209,7 +209,7 @@ function Selbstcheck({ profil }: { profil: UserProfile | undefined }) {
       ))}
 
       {check?.datum && (
-        <p className="mt-4 text-xs text-gray-500">
+        <p className="mt-4 text-xs text-muted">
           Zuletzt aktualisiert: {check.datum.slice(8, 10)}.{check.datum.slice(5, 7)}.
           {check.datum.slice(0, 4)}
         </p>
@@ -228,7 +228,7 @@ export default function AnalyseTab() {
   return (
     <div className="space-y-6">
       <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
           Haltungsmuster
         </h2>
         <div className="space-y-3">
@@ -239,7 +239,7 @@ export default function AnalyseTab() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
           Kraftverhältnisse (aus deinen 1RM-Werten)
         </h2>
         <div className="space-y-3">
@@ -250,13 +250,13 @@ export default function AnalyseTab() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
           Haltungs-Selbstcheck
         </h2>
         <Selbstcheck profil={profil} />
       </section>
 
-      <p className="px-1 pb-2 text-xs leading-relaxed text-gray-600">
+      <p className="px-1 pb-2 text-xs leading-relaxed text-faint">
         Hinweis: Alle Auswertungen sind Schätzwerte auf Basis deiner Eingaben und ersetzen keine
         physiotherapeutische oder ärztliche Diagnose.
       </p>

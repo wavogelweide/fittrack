@@ -15,7 +15,7 @@ export type Auswahl =
 function Abschnitt({ titel, children }: { titel: string; children: React.ReactNode }) {
   return (
     <section className="mt-6">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">{titel}</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{titel}</h3>
       {children}
     </section>
   )
@@ -27,7 +27,7 @@ export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; 
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
         <button
           onClick={onClose}
-          className="-mx-2 my-3 flex h-12 items-center gap-2 px-2 text-base text-gray-300 active:text-white"
+          className="-mx-2 my-3 flex h-12 items-center gap-2 px-2 text-base text-txt2 active:text-txt"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
@@ -35,7 +35,7 @@ export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; 
           Zurück
         </button>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+        <div className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
           {auswahl.typ === 'kraft' && <KraftDetail uebung={auswahl.uebung} />}
           {auswahl.typ === 'cardio' && <CardioDetail geraet={auswahl.geraet} />}
           {auswahl.typ === 'dehnen' && <DehnDetail uebung={auswahl.uebung} />}
@@ -52,7 +52,7 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
         <Chip text={BEWEGUNGSTYP_LABELS[uebung.bewegungsTyp]} farbe="lime" />
       </div>
       <h2 className="text-3xl font-bold tracking-tight">{uebung.name}</h2>
-      <p className="mt-1 text-sm text-gray-400">Maschine: {uebung.maschine}</p>
+      <p className="mt-1 text-sm text-txt3">Maschine: {uebung.maschine}</p>
 
       <Abschnitt titel="Illustration">
         <ExerciseIllustration illustrationId={uebung.illustrationId} name={uebung.name} />
@@ -93,19 +93,19 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
       </Abschnitt>
 
       <Abschnitt titel="Beschreibung">
-        <p className="leading-relaxed text-gray-300">{geraet.beschreibung}</p>
+        <p className="leading-relaxed text-txt2">{geraet.beschreibung}</p>
       </Abschnitt>
 
       <Abschnitt titel="Trainingsmethoden">
         <div className="space-y-3">
           <div className="rounded-xl border border-neon-cyan/25 bg-neon-cyan/5 p-4">
             <p className="font-semibold text-neon-cyan">GA1 – Grundlagenausdauer</p>
-            <p className="mt-1 text-sm leading-relaxed text-gray-300">
+            <p className="mt-1 text-sm leading-relaxed text-txt2">
               Lockeres Tempo in der Pulszone von 60–75 % der maximalen Herzfrequenz, empfohlene
               Dauer 30–60 Minuten.
             </p>
             {zone ? (
-              <p className="mt-2 text-sm text-gray-300">
+              <p className="mt-2 text-sm text-txt2">
                 Deine Zone:{' '}
                 <span className="text-2xl font-bold text-neon-cyan">
                   {zone.von}–{zone.bis}
@@ -113,14 +113,14 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
                 bpm
               </p>
             ) : (
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-muted">
                 Trage dein Alter im Profil-Tab ein, um deine persönliche Zone zu sehen.
               </p>
             )}
           </div>
           <div className="rounded-xl border border-neon-cyan/25 bg-neon-cyan/5 p-4">
             <p className="font-semibold text-neon-cyan">60/120-Intervalle</p>
-            <p className="mt-1 text-sm leading-relaxed text-gray-300">
+            <p className="mt-1 text-sm leading-relaxed text-txt2">
               Nach dem Aufwärmen 6–10 Runden: 60 Sekunden hohe Belastung, 120 Sekunden lockere
               Erholung. Intervall-Timer folgt im Workout-Modus.
             </p>
@@ -146,7 +146,7 @@ function DehnDetail({ uebung }: { uebung: StretchExercise }) {
       <Abschnitt titel="Haltedauer">
         <p>
           <span className="text-5xl font-bold text-neon-violet">{uebung.halteDauerSek}</span>
-          <span className="ml-2 text-gray-400">Sekunden pro Seite/Durchgang</span>
+          <span className="ml-2 text-txt3">Sekunden pro Seite/Durchgang</span>
         </p>
       </Abschnitt>
 
@@ -159,7 +159,7 @@ function DehnDetail({ uebung }: { uebung: StretchExercise }) {
       </Abschnitt>
 
       <Abschnitt titel="Anleitung">
-        <p className="leading-relaxed text-gray-300">{uebung.anleitung}</p>
+        <p className="leading-relaxed text-txt2">{uebung.anleitung}</p>
       </Abschnitt>
     </>
   )

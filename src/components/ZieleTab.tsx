@@ -19,9 +19,9 @@ function referenzName(ziel: Pick<Goal, 'typ' | 'referenz'>): string {
 }
 
 const TYP_FARBE: Record<Goal['typ'], { balken: string; text: string; chart: string }> = {
-  kraft_gewicht: { balken: 'bg-neon-lime', text: 'text-neon-lime', chart: '#a3e635' },
-  cardio_zeit: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: '#22d3ee' },
-  cardio_distanz: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: '#22d3ee' },
+  kraft_gewicht: { balken: 'bg-neon-lime', text: 'text-neon-lime', chart: 'var(--neon-lime)' },
+  cardio_zeit: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: 'var(--neon-cyan)' },
+  cardio_distanz: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: 'var(--neon-cyan)' },
 }
 
 function NeuesZiel({ onFertig }: { onFertig: () => void }) {
@@ -52,10 +52,10 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
   }
 
   const feldKlasse =
-    'mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-base text-gray-100 placeholder-gray-600 outline-none focus:border-white/25'
+    'mt-1 w-full rounded-xl border border-line bg-elev px-3 py-3 text-base text-txt placeholder-faint outline-none focus:border-line-strong'
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+    <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
       <div className="space-y-2">
         {(Object.keys(ZIEL_TYP_LABELS) as Goal['typ'][]).map((t) => (
           <button
@@ -67,8 +67,8 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
             className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
               typ === t
                 ? 'border-neon-lime/50 bg-neon-lime/10 text-neon-lime'
-                : 'border-white/10 bg-white/5 text-gray-300'
-            }`}
+                : 'border-line bg-elev text-txt2'
+           }`}
           >
             {ZIEL_TYP_LABELS[t]}
           </button>
@@ -76,7 +76,7 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
       </div>
 
       <label className="mt-4 block">
-        <span className="text-sm text-gray-400">
+        <span className="text-sm text-txt3">
           {typ === 'kraft_gewicht' ? 'Übung' : 'Cardio-Gerät'}
         </span>
         <select value={referenz} onChange={(e) => setReferenz(e.target.value)} className={feldKlasse}>
@@ -93,7 +93,7 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-sm text-gray-400">Zielwert ({ZIEL_EINHEIT[typ]})</span>
+          <span className="text-sm text-txt3">Zielwert ({ZIEL_EINHEIT[typ]})</span>
           <input
             type="number"
             inputMode="decimal"
@@ -104,7 +104,7 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-gray-400">Zieldatum (optional)</span>
+          <span className="text-sm text-txt3">Zieldatum (optional)</span>
           <input
             type="date"
             min={heute()}
@@ -118,7 +118,7 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
       <button
         onClick={speichern}
         disabled={!gueltig}
-        className="mt-4 h-12 w-full rounded-xl border border-neon-lime/50 bg-neon-lime/10 font-semibold text-neon-lime disabled:border-white/10 disabled:bg-white/5 disabled:text-gray-600"
+        className="mt-4 h-12 w-full rounded-xl border border-neon-lime/50 bg-neon-lime/10 font-semibold text-neon-lime disabled:border-line disabled:bg-elev disabled:text-faint"
       >
         Ziel anlegen
       </button>
@@ -153,13 +153,13 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
   return (
     <div
       className={`rounded-2xl border p-4 backdrop-blur-md ${
-        erreicht ? 'border-neon-lime/40 bg-neon-lime/5' : 'border-white/10 bg-white/5'
-      }`}
+        erreicht ? 'border-neon-lime/40 bg-neon-lime/5' : 'border-line bg-elev'
+     }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold">{referenzName(ziel)}</p>
-          <p className="text-xs text-gray-500">{ZIEL_TYP_LABELS[ziel.typ]}</p>
+          <p className="text-xs text-muted">{ZIEL_TYP_LABELS[ziel.typ]}</p>
         </div>
         {erreicht ? (
           <span className="shrink-0 rounded-full border border-neon-lime/40 bg-neon-lime/10 px-2 py-0.5 text-[11px] text-neon-lime">
@@ -169,9 +169,9 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
           <span
             className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${
               tage < 0
-                ? 'border-red-400/40 bg-red-400/10 text-red-300'
-                : 'border-white/15 bg-white/5 text-gray-400'
-            }`}
+                ? 'border-danger/40 bg-danger/15 text-danger'
+                : 'border-line-strong bg-elev text-txt3'
+           }`}
           >
             {tage < 0 ? `${-tage} Tage überfällig` : tage === 0 ? 'Heute fällig' : `noch ${tage} Tage`}
           </span>
@@ -182,13 +182,13 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
         <span className={`text-4xl font-bold ${erreicht ? 'text-neon-lime' : farbe.text}`}>
           {f.aktuell !== null ? einheitFormat(f.aktuell) : '–'}
         </span>
-        <span className="text-gray-500">
+        <span className="text-muted">
           / {einheitFormat(ziel.zielwert)} {f.einheit}
         </span>
-        <span className="ml-auto text-sm font-semibold text-gray-400">{f.prozent} %</span>
+        <span className="ml-auto text-sm font-semibold text-txt3">{f.prozent} %</span>
       </div>
 
-      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-elev2">
         <div
           className={`h-full rounded-full transition-[width] duration-500 ${erreicht ? 'bg-neon-lime' : farbe.balken}`}
           style={{ width: `${f.prozent}%` }}
@@ -199,10 +199,10 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
         <div className="mt-3 h-28">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartDaten} margin={{ top: 6, right: 6, bottom: 0, left: -18 }}>
-              <XAxis dataKey="datum" tick={{ fill: '#6b7280', fontSize: 11 }} tickLine={false} axisLine={{ stroke: '#374151' }} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} tickLine={false} axisLine={{ stroke: '#374151' }} width={44} domain={['auto', 'auto']} />
+              <XAxis dataKey="datum" tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'var(--chart-grid)' }} />
+              <YAxis tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} tickLine={false} axisLine={{ stroke: 'var(--chart-grid)' }} width={44} domain={['auto', 'auto']} />
               <Tooltip
-                contentStyle={{ background: '#121826', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#e5e7eb' }}
+                contentStyle={{ background: 'var(--elev-solid)', border: '1px solid var(--line)', borderRadius: 12, color: 'var(--txt)' }}
                 formatter={(w) => [`${einheitFormat(Number(w))} ${f.einheit}`, 'Bestwert']}
               />
               <ReferenceLine y={ziel.zielwert} stroke={farbe.chart} strokeDasharray="4 4" strokeOpacity={0.6} />
@@ -212,7 +212,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
         </div>
       ) : (
         f.aktuell === null && (
-          <p className="mt-3 text-xs leading-relaxed text-gray-500">
+          <p className="mt-3 text-xs leading-relaxed text-muted">
             {ziel.typ === 'kraft_gewicht'
               ? 'Noch keine Daten – trage ein Maximalgewicht ein oder protokolliere ein Workout mit dieser Übung.'
               : 'Noch keine Daten – protokolliere eine Cardio-Einheit auf diesem Gerät.'}
@@ -220,7 +220,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
         )
       )}
 
-      <button onClick={loeschen} className="mt-3 text-xs text-gray-600 underline-offset-2 active:underline">
+      <button onClick={loeschen} className="mt-3 text-xs text-faint underline-offset-2 active:underline">
         Ziel löschen
       </button>
     </div>
@@ -241,14 +241,14 @@ export default function ZieleTab() {
       ) : (
         <button
           onClick={() => setFormOffen(true)}
-          className="h-14 w-full rounded-2xl border border-dashed border-white/20 text-gray-300 active:bg-white/5"
+          className="h-14 w-full rounded-2xl border border-dashed border-line-strong text-txt2 active:bg-elev"
         >
           + Neues Ziel
         </button>
       )}
 
       {ziele.length === 0 && !formOffen && (
-        <p className="px-1 text-sm leading-relaxed text-gray-500">
+        <p className="px-1 text-sm leading-relaxed text-muted">
           Setze dir ein Kraft- oder Cardio-Ziel – der Fortschritt wird automatisch aus deinen
           Maximalgewichten und Workouts berechnet.
         </p>
@@ -260,7 +260,7 @@ export default function ZieleTab() {
 
       {erreichte.length > 0 && (
         <>
-          <h2 className="px-1 pt-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+          <h2 className="px-1 pt-2 text-xs font-semibold uppercase tracking-widest text-muted">
             Erreicht
           </h2>
           {erreichte.map((z) => (

@@ -63,18 +63,18 @@ function Stepper({
       <button
         onClick={() => setze((wert ?? min) - schritt)}
         aria-label="verringern"
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-gray-300 active:bg-white/15"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-elev text-xl text-txt2 active:bg-elev2"
       >
         −
       </button>
       <span className="min-w-12 text-center">
         <span className="text-lg font-semibold">{wert !== null ? kg(wert) : '–'}</span>
-        <span className="block text-[10px] leading-none text-gray-500">{einheit}</span>
+        <span className="block text-[10px] leading-none text-muted">{einheit}</span>
       </span>
       <button
         onClick={() => setze((wert ?? 0) + schritt)}
         aria-label="erhöhen"
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-gray-300 active:bg-white/15"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-elev text-xl text-txt2 active:bg-elev2"
       >
         +
       </button>
@@ -88,8 +88,8 @@ function CheckKreis({ aktiv, onToggle }: { aktiv: boolean; onToggle: () => void 
       onClick={onToggle}
       aria-label={aktiv ? 'erledigt' : 'offen'}
       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-        aktiv ? 'border-neon-lime bg-neon-lime/15 text-neon-lime' : 'border-white/20 text-transparent'
-      }`}
+        aktiv ? 'border-neon-lime bg-neon-lime/15 text-neon-lime' : 'border-line-strong text-transparent'
+     }`}
     >
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 13l4 4 10-10" />
@@ -118,8 +118,8 @@ function KraftKarte({
   return (
     <div
       className={`rounded-2xl border p-4 backdrop-blur-md transition-colors ${
-        fertig ? 'border-neon-lime/40 bg-neon-lime/5' : 'border-white/10 bg-white/5'
-      }`}
+        fertig ? 'border-neon-lime/40 bg-neon-lime/5' : 'border-line bg-elev'
+     }`}
     >
       <div className="flex items-center gap-3">
         <ExerciseIllustration
@@ -131,7 +131,7 @@ function KraftKarte({
         <button
           onClick={onRemove}
           aria-label="Übung entfernen"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 active:text-gray-300"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-faint active:text-txt2"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M6 6l12 12M18 6L6 18" />
@@ -171,7 +171,7 @@ function KraftKarte({
             ],
           })
         }
-        className="mt-3 h-10 w-full rounded-xl border border-dashed border-white/15 text-sm text-gray-400 active:bg-white/5"
+        className="mt-3 h-10 w-full rounded-xl border border-dashed border-line-strong text-sm text-txt3 active:bg-elev"
       >
         + Satz
       </button>
@@ -252,7 +252,7 @@ function CardioKarte({
     schrittAttr = '1',
   ) => (
     <label className="block">
-      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-xs text-muted">{label}</span>
       <input
         type="number"
         inputMode="decimal"
@@ -263,7 +263,7 @@ function CardioKarte({
           const n = e.target.valueAsNumber
           setze(Number.isFinite(n) && n > 0 ? n : undefined)
         }}
-        className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-lg text-gray-100 outline-none focus:border-white/25"
+        className="mt-1 w-full rounded-xl border border-line bg-elev px-3 py-2.5 text-lg text-txt outline-none focus:border-line-strong"
       />
     </label>
   )
@@ -284,8 +284,8 @@ function CardioKarte({
             className={`h-10 rounded-full border px-4 text-sm transition-colors ${
               cardio.cardioType === g.id
                 ? 'border-neon-cyan/60 bg-neon-cyan/15 text-neon-cyan'
-                : 'border-white/10 bg-white/5 text-gray-400'
-            }`}
+                : 'border-line bg-elev text-txt3'
+           }`}
           >
             {g.name}
           </button>
@@ -305,8 +305,8 @@ function CardioKarte({
             className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
               cardio.methode === m
                 ? 'border-neon-cyan/60 bg-neon-cyan/15 text-neon-cyan'
-                : 'border-white/10 bg-white/5 text-gray-400'
-            }`}
+                : 'border-line bg-elev text-txt3'
+           }`}
           >
             {label}
           </button>
@@ -316,7 +316,7 @@ function CardioKarte({
       {cardio.methode === 'ga1' ? (
         <div className="mt-4 text-center">
           {zone ? (
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-txt2">
               <span className="mr-1.5 inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-neon-cyan align-middle" />
               Zielzone{' '}
               <span className="text-3xl font-bold text-neon-cyan">
@@ -325,18 +325,18 @@ function CardioKarte({
               bpm
             </p>
           ) : (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted">
               Trage dein Alter im Profil ein, um deine GA1-Pulszone zu sehen.
             </p>
           )}
-          <p className="mt-3 text-5xl font-bold tabular-nums text-gray-100">
+          <p className="mt-3 text-5xl font-bold tabular-nums text-txt">
             {formatiereSekunden(timer.vergangenSek)}
           </p>
-          <p className="mt-1 text-xs text-gray-500">Empfohlen: 30–60 Minuten lockeres Tempo</p>
+          <p className="mt-1 text-xs text-muted">Empfohlen: 30–60 Minuten lockeres Tempo</p>
         </div>
       ) : (
         <div className="mt-4 text-center">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+          <div className="flex items-center justify-center gap-2 text-sm text-txt3">
             Runden:
             {[6, 8, 10].map((r) => (
               <button
@@ -349,8 +349,8 @@ function CardioKarte({
                 className={`h-9 w-9 rounded-full border font-semibold transition-colors ${
                   runden === r
                     ? 'border-neon-cyan/60 bg-neon-cyan/15 text-neon-cyan'
-                    : 'border-white/10 bg-white/5 text-gray-400'
-                }`}
+                    : 'border-line bg-elev text-txt3'
+               }`}
               >
                 {r}
               </button>
@@ -359,11 +359,11 @@ function CardioKarte({
           <p
             className={`mt-3 text-sm font-semibold uppercase tracking-widest ${
               status.phase === 'belastung'
-                ? 'text-amber-300'
+                ? 'text-warn'
                 : status.phase === 'erholung'
                   ? 'text-neon-cyan'
                   : 'text-neon-lime'
-            }`}
+           }`}
           >
             {status.phase === 'belastung'
               ? `Belastung · Runde ${status.runde}/${runden}`
@@ -371,10 +371,10 @@ function CardioKarte({
                 ? `Erholung · Runde ${status.runde}/${runden}`
                 : 'Geschafft!'}
           </p>
-          <p className="text-6xl font-bold tabular-nums text-gray-100">
+          <p className="text-6xl font-bold tabular-nums text-txt">
             {formatiereSekunden(status.verbleibendSek)}
           </p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-muted">
             Gesamt verbleibend {formatiereSekunden(status.gesamtVerbleibendSek)} · Signal beim
             Wechsel
           </p>
@@ -396,9 +396,9 @@ function CardioKarte({
           }}
           className={`h-14 flex-1 rounded-xl border text-lg font-semibold transition-colors ${
             timer.laeuft
-              ? 'border-amber-300/50 bg-amber-300/10 text-amber-300'
+              ? 'border-warn/50 bg-warn/10 text-warn'
               : 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
-          }`}
+         }`}
         >
           {timer.laeuft ? 'Pause' : timer.vergangenSek > 0 ? 'Weiter' : 'Start'}
         </button>
@@ -407,7 +407,7 @@ function CardioKarte({
             timer.reset()
             vorherigePhase.current = 'belastung'
           }}
-          className="h-14 w-24 rounded-xl border border-white/10 bg-white/5 text-sm text-gray-400 active:bg-white/10"
+          className="h-14 w-24 rounded-xl border border-line bg-elev text-sm text-txt3 active:bg-elev2"
         >
           Zurücksetzen
         </button>
@@ -436,21 +436,21 @@ function DehnZeile({
 }) {
   const info = DEHN_INFO[eintrag.stretchId]
   return (
-    <li className="flex items-center gap-3 border-t border-white/5 py-2.5 first:border-t-0">
+    <li className="flex items-center gap-3 border-t border-hairline py-2.5 first:border-t-0">
       <CheckKreis aktiv={eintrag.erledigt} onToggle={onToggle} />
       <div className="min-w-0 flex-1">
-        <p className={`font-medium ${eintrag.erledigt ? 'text-gray-500 line-through' : ''}`}>
+        <p className={`font-medium ${eintrag.erledigt ? 'text-muted line-through' : ''}`}>
           {info?.name ?? eintrag.stretchId}
         </p>
-        <p className="text-xs text-gray-500">{eintrag.zielSek} s halten</p>
+        <p className="text-xs text-muted">{eintrag.zielSek} s halten</p>
       </div>
       <button
         onClick={onTimer}
         className={`h-11 min-w-20 rounded-xl border px-3 text-lg font-semibold tabular-nums transition-colors ${
           laufendSek !== null
             ? 'border-neon-violet/60 bg-neon-violet/15 text-neon-violet'
-            : 'border-white/10 bg-white/5 text-gray-300 active:bg-white/10'
-        }`}
+            : 'border-line bg-elev text-txt2 active:bg-elev2'
+       }`}
       >
         {laufendSek !== null ? formatiereSekunden(laufendSek) : '▶ Timer'}
       </button>
@@ -474,7 +474,7 @@ function UebungsWahl({
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
           <h2 className="text-lg font-bold">{titel}</h2>
-          <button onClick={onClose} className="h-10 px-2 text-gray-400 active:text-white">
+          <button onClick={onClose} className="h-10 px-2 text-txt3 active:text-txt">
             Schließen
           </button>
         </div>
@@ -483,12 +483,12 @@ function UebungsWahl({
             <li key={e.id}>
               <button
                 onClick={() => onSelect(e.id)}
-                className="flex w-full items-center gap-3 border-t border-white/5 py-2.5 text-left first:border-t-0 active:bg-white/5"
+                className="flex w-full items-center gap-3 border-t border-hairline py-2.5 text-left first:border-t-0 active:bg-elev"
               >
                 <ExerciseIllustration klein illustrationId={e.illustrationId} name={e.name} />
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{e.name}</span>
-                  {e.untertitel && <span className="block text-xs text-gray-500">{e.untertitel}</span>}
+                  {e.untertitel && <span className="block text-xs text-muted">{e.untertitel}</span>}
                 </span>
               </button>
             </li>
@@ -592,7 +592,7 @@ export default function WorkoutModus({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+7rem)]">
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
-          <button onClick={abbrechen} className="-ml-2 h-11 px-2 text-gray-400 active:text-white">
+          <button onClick={abbrechen} className="-ml-2 h-11 px-2 text-txt3 active:text-txt">
             Abbrechen
           </button>
           <h2 className="min-w-0 truncate text-lg font-bold">{titel}</h2>
@@ -605,12 +605,12 @@ export default function WorkoutModus({
         </div>
 
         {meldung && (
-          <p className="mt-2 rounded-xl border border-amber-400/25 bg-amber-400/5 p-3 text-sm text-amber-200/90">
+          <p className="mt-2 rounded-xl border border-warn/30 bg-warn/10 p-3 text-sm text-warn">
             {meldung}
           </p>
         )}
 
-        <h3 className="mt-4 text-xs font-semibold uppercase tracking-widest text-gray-500">Kraft</h3>
+        <h3 className="mt-4 text-xs font-semibold uppercase tracking-widest text-muted">Kraft</h3>
         <div className="mt-2 space-y-3">
           {entwurf.kraft.map((k, i) => (
             <KraftKarte
@@ -626,13 +626,13 @@ export default function WorkoutModus({
           ))}
           <button
             onClick={() => setWahl('kraft')}
-            className="h-12 w-full rounded-xl border border-dashed border-white/15 text-sm text-gray-400 active:bg-white/5"
+            className="h-12 w-full rounded-xl border border-dashed border-line-strong text-sm text-txt3 active:bg-elev"
           >
             + Kraftübung hinzufügen
           </button>
         </div>
 
-        <h3 className="mt-6 text-xs font-semibold uppercase tracking-widest text-gray-500">Cardio</h3>
+        <h3 className="mt-6 text-xs font-semibold uppercase tracking-widest text-muted">Cardio</h3>
         <div className="mt-2">
           {entwurf.cardio ? (
             <CardioKarte
@@ -644,17 +644,17 @@ export default function WorkoutModus({
               onClick={() =>
                 setEntwurf((e) => ({ ...e, cardio: { cardioType: 'laufband', methode: 'ga1' } }))
               }
-              className="h-12 w-full rounded-xl border border-dashed border-white/15 text-sm text-gray-400 active:bg-white/5"
+              className="h-12 w-full rounded-xl border border-dashed border-line-strong text-sm text-txt3 active:bg-elev"
             >
               + Cardio hinzufügen
             </button>
           )}
         </div>
 
-        <h3 className="mt-6 text-xs font-semibold uppercase tracking-widest text-gray-500">
+        <h3 className="mt-6 text-xs font-semibold uppercase tracking-widest text-muted">
           Dehnen & Rollen
         </h3>
-        <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+        <div className="mt-2 rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
           {entwurf.dehnen.length > 0 && (
             <ul>
               {entwurf.dehnen.map((d, i) => (
@@ -688,9 +688,9 @@ export default function WorkoutModus({
           )}
           <button
             onClick={() => setWahl('dehnen')}
-            className={`h-12 w-full rounded-xl border border-dashed border-white/15 text-sm text-gray-400 active:bg-white/5 ${
+            className={`h-12 w-full rounded-xl border border-dashed border-line-strong text-sm text-txt3 active:bg-elev ${
               entwurf.dehnen.length > 0 ? 'mt-3' : ''
-            }`}
+           }`}
           >
             + Dehnübung hinzufügen
           </button>
