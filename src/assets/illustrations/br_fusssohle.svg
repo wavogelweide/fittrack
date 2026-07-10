@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+<style>
+svg{color:#a78bfa}
+line,path,circle{stroke:#dde3ec;stroke-width:5;stroke-linecap:round;fill:none}
+.far line,.far path{stroke:#7d8595}
+.dev line,.dev path,.dev circle{stroke:#5c6678;stroke-width:4}
+.dev .fill{fill:#39414f;stroke:none}
+.halo line{stroke:currentColor;stroke-width:14;opacity:0.22}
+.acc line{stroke:currentColor;stroke-width:6}
+.arr{stroke:currentColor;stroke-width:3.5;opacity:0.9}
+</style>
+<defs><marker id="ah" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L10 6 L1 11 Z" style="fill:#a78bfa;stroke:none"/></marker></defs>
+<g class="dev"><circle cx="126" cy="158" r="6"/><circle cx="126" cy="158" r="2"/><line x1="26" y1="168" x2="174" y2="168" opacity="0.45"/></g>
+<g class="far"><line x1="100" y1="106" x2="96.7" y2="137.8"/><line x1="96.7" y1="137.8" x2="95.6" y2="167.8"/></g><line x1="100" y1="106" x2="100" y2="60"/><circle cx="100" cy="47" r="7"/><line x1="100" y1="60" x2="95.8" y2="83.6"/><line x1="95.8" y1="83.6" x2="94.3" y2="101.6"/><line x1="100" y1="106" x2="130" y2="122"/><line x1="130" y1="122" x2="132.1" y2="151.9"/><g class="halo"><circle cx="132.1" cy="151.9" r="11" fill="currentColor" stroke="none" opacity="0.22"/></g><g class="acc"><circle cx="132.1" cy="151.9" r="4.5" fill="currentColor" stroke="none"/></g><path class="arr" d="M 112 174 L 140 174" marker-end="url(#ah)"/>
+</svg>

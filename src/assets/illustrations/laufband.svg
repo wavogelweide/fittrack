@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+<style>
+svg{color:#22d3ee}
+line,path,circle{stroke:#dde3ec;stroke-width:5;stroke-linecap:round;fill:none}
+.far line,.far path{stroke:#7d8595}
+.dev line,.dev path,.dev circle{stroke:#5c6678;stroke-width:4}
+.dev .fill{fill:#39414f;stroke:none}
+.halo line{stroke:currentColor;stroke-width:14;opacity:0.22}
+.acc line{stroke:currentColor;stroke-width:6}
+.arr{stroke:currentColor;stroke-width:3.5;opacity:0.9}
+.f1{animation:fa 1.9s ease-in-out infinite}.f2{opacity:0;animation:fb 1.9s ease-in-out infinite}
+@keyframes fa{0%,42%{opacity:1}52%,90%{opacity:0}100%{opacity:1}}
+@keyframes fb{0%,42%{opacity:0}52%,90%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.f1,.f2{animation:none}}</style>
+<defs><marker id="ah" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L10 6 L1 11 Z" style="fill:#22d3ee;stroke:none"/></marker></defs>
+<g class="dev"><line x1="48" y1="160" x2="152" y2="154"/><line x1="144" y1="154" x2="154" y2="96"/><line x1="148" y1="96" x2="168" y2="92"/><path class="arr" d="M150 88 l10 -2" opacity="0.9"/></g>
+<g class="f1"><g class="far"><line x1="103.6" y1="60.7" x2="93.6" y2="78"/><line x1="93.6" y1="78" x2="104" y2="92.7"/><line x1="96" y1="104" x2="76.3" y2="129.2"/><line x1="76.3" y1="129.2" x2="52.7" y2="118.2"/></g><line x1="96" y1="104" x2="103.6" y2="60.7"/><circle cx="105.9" cy="47.9" r="7"/><line x1="103.6" y1="60.7" x2="121.8" y2="52.2"/><line x1="121.8" y1="52.2" x2="136.5" y2="62.5"/><line x1="96" y1="104" x2="117.4" y2="127.8"/><line x1="117.4" y1="127.8" x2="114.5" y2="155.6"/></g><g class="f2"><g class="far"><line x1="103.6" y1="60.7" x2="121.8" y2="52.2"/><line x1="121.8" y1="52.2" x2="136.5" y2="62.5"/><line x1="96" y1="104" x2="117.4" y2="127.8"/><line x1="117.4" y1="127.8" x2="114.5" y2="155.6"/></g><line x1="96" y1="104" x2="103.6" y2="60.7"/><circle cx="105.9" cy="47.9" r="7"/><line x1="103.6" y1="60.7" x2="93.6" y2="78"/><line x1="93.6" y1="78" x2="104" y2="92.7"/><line x1="96" y1="104" x2="76.3" y2="129.2"/><line x1="76.3" y1="129.2" x2="52.7" y2="118.2"/></g>
+</svg>

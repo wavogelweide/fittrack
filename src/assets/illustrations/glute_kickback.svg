@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+<style>
+svg{color:#a3e635}
+line,path,circle{stroke:#dde3ec;stroke-width:5;stroke-linecap:round;fill:none}
+.far line,.far path{stroke:#7d8595}
+.dev line,.dev path,.dev circle{stroke:#5c6678;stroke-width:4}
+.dev .fill{fill:#39414f;stroke:none}
+.halo line{stroke:currentColor;stroke-width:14;opacity:0.22}
+.acc line{stroke:currentColor;stroke-width:6}
+.arr{stroke:currentColor;stroke-width:3.5;opacity:0.9}
+.f1{animation:fa 1.9s ease-in-out infinite}.f2{opacity:0;animation:fb 1.9s ease-in-out infinite}
+@keyframes fa{0%,42%{opacity:1}52%,90%{opacity:0}100%{opacity:1}}
+@keyframes fb{0%,42%{opacity:0}52%,90%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.f1,.f2{animation:none}}</style>
+<defs><marker id="ah" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 L10 6 L1 11 Z" style="fill:#a3e635;stroke:none"/></marker></defs>
+<g class="dev"><line x1="146" y1="62" x2="146" y2="166"/><line x1="26" y1="170" x2="174" y2="170" opacity="0.45"/></g>
+<g class="f1"><g class="far"><line x1="92" y1="112" x2="80.4" y2="143.9"/><line x1="80.4" y1="143.9" x2="77.9" y2="171.8"/></g><line x1="92" y1="112" x2="127.2" y2="82.4"/><circle cx="137.2" cy="74.1" r="7"/><line x1="127.2" y1="82.4" x2="137.4" y2="104.2"/><line x1="137.4" y1="104.2" x2="143.5" y2="121.1"/><line x1="92" y1="112" x2="90.7" y2="148"/><line x1="90.7" y1="148" x2="91.8" y2="178"/><g class="halo"><circle cx="92" cy="112" r="11" fill="currentColor" stroke="none" opacity="0.22"/></g><g class="acc"><circle cx="92" cy="112" r="4.5" fill="currentColor" stroke="none"/></g></g><g class="f2"><g class="far"><line x1="92" y1="112" x2="59.4" y2="127.2"/><line x1="59.4" y1="127.2" x2="31.2" y2="137.5"/></g><line x1="92" y1="112" x2="127.2" y2="82.4"/><circle cx="137.2" cy="74.1" r="7"/><line x1="127.2" y1="82.4" x2="137.4" y2="104.2"/><line x1="137.4" y1="104.2" x2="143.5" y2="121.1"/><line x1="92" y1="112" x2="90.7" y2="148"/><line x1="90.7" y1="148" x2="91.8" y2="178"/><g class="halo"><circle cx="92" cy="112" r="11" fill="currentColor" stroke="none" opacity="0.22"/></g><g class="acc"><circle cx="92" cy="112" r="4.5" fill="currentColor" stroke="none"/></g></g>
+</svg>

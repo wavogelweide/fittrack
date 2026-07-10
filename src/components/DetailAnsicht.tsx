@@ -1,19 +1,12 @@
 import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchExercise } from '../db/types'
 import Chip from './Chip'
+import ExerciseIllustration from './ExerciseIllustration'
 
 export type Auswahl =
   | { typ: 'kraft'; uebung: Exercise }
   | { typ: 'cardio'; geraet: CardioGeraet }
   | { typ: 'dehnen'; uebung: StretchExercise }
-
-function IllustrationPlatzhalter() {
-  return (
-    <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-white/15 text-sm text-gray-600">
-      Illustration folgt (Phase 1b)
-    </div>
-  )
-}
 
 function Abschnitt({ titel, children }: { titel: string; children: React.ReactNode }) {
   return (
@@ -58,7 +51,7 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
       <p className="mt-1 text-sm text-gray-400">Maschine: {uebung.maschine}</p>
 
       <Abschnitt titel="Illustration">
-        <IllustrationPlatzhalter />
+        <ExerciseIllustration illustrationId={uebung.illustrationId} name={uebung.name} />
       </Abschnitt>
 
       <Abschnitt titel="Primäre Muskeln">
@@ -88,7 +81,7 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
       <h2 className="text-3xl font-bold tracking-tight">{geraet.name}</h2>
 
       <Abschnitt titel="Illustration">
-        <IllustrationPlatzhalter />
+        <ExerciseIllustration illustrationId={geraet.illustrationId} name={geraet.name} />
       </Abschnitt>
 
       <Abschnitt titel="Beschreibung">
@@ -127,7 +120,7 @@ function DehnDetail({ uebung }: { uebung: StretchExercise }) {
       <h2 className="text-3xl font-bold tracking-tight">{uebung.name}</h2>
 
       <Abschnitt titel="Illustration">
-        <IllustrationPlatzhalter />
+        <ExerciseIllustration illustrationId={uebung.illustrationId} name={uebung.name} />
       </Abschnitt>
 
       <Abschnitt titel="Haltedauer">

@@ -2,13 +2,23 @@ import { useState } from 'react'
 import { ART_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchArt, StretchExercise } from '../db/types'
 import Chip from './Chip'
+import ExerciseIllustration from './ExerciseIllustration'
 
-function KatalogKarte({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function KatalogKarte({
+  onClick,
+  thumb,
+  children,
+}: {
+  onClick: () => void
+  thumb?: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
     <button
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur-md transition-transform active:scale-[0.98]"
     >
+      {thumb}
       <div className="min-w-0 flex-1">{children}</div>
       <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 6l6 6-6 6" />
@@ -32,7 +42,11 @@ export function KraftListe({
   return (
     <div className="space-y-3">
       {uebungen.map((u) => (
-        <KatalogKarte key={u.id} onClick={() => onAuswahl(u)}>
+        <KatalogKarte
+          key={u.id}
+          onClick={() => onAuswahl(u)}
+          thumb={<ExerciseIllustration klein illustrationId={u.illustrationId} name={u.name} />}
+        >
           <p className="font-semibold">{u.name}</p>
           <p className="mt-0.5 truncate text-sm text-gray-500">{u.maschine}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -57,7 +71,11 @@ export function CardioListe({
   return (
     <div className="space-y-3">
       {geraete.map((g) => (
-        <KatalogKarte key={g.id} onClick={() => onAuswahl(g)}>
+        <KatalogKarte
+          key={g.id}
+          onClick={() => onAuswahl(g)}
+          thumb={<ExerciseIllustration klein illustrationId={g.illustrationId} name={g.name} />}
+        >
           <p className="font-semibold">{g.name}</p>
           <p className="mt-0.5 line-clamp-2 text-sm text-gray-500">{g.beschreibung}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -108,7 +126,11 @@ export function DehnListe({
       ) : (
         <div className="space-y-3">
           {gefiltert.map((u) => (
-            <KatalogKarte key={u.id} onClick={() => onAuswahl(u)}>
+            <KatalogKarte
+              key={u.id}
+              onClick={() => onAuswahl(u)}
+              thumb={<ExerciseIllustration klein illustrationId={u.illustrationId} name={u.name} />}
+            >
               <p className="font-semibold">{u.name}</p>
               <p className="mt-0.5 text-sm text-gray-500">
                 {ART_LABELS[u.art]} · {u.halteDauerSek} Sek.
