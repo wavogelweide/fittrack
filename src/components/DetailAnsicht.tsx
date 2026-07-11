@@ -24,9 +24,9 @@ function Abschnitt({ titel, children }: { titel: string; children: React.ReactNo
 }
 
 export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; onClose: () => void }) {
-  useZurueckGeste(onClose)
+  const geste = useZurueckGeste(onClose)
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
+    <div ref={geste} className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
         <button
           onClick={onClose}

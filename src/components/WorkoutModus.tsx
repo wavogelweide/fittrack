@@ -499,9 +499,9 @@ function UebungsWahl({
   onSelect: (id: string) => void
   onClose: () => void
 }) {
-  useZurueckGeste(onClose)
+  const geste = useZurueckGeste(onClose)
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
+    <div ref={geste} className="fixed inset-0 z-[60] overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
           <h2 className="text-lg font-bold">{titel}</h2>
@@ -620,7 +620,7 @@ export default function WorkoutModus({
   }
 
   // Wischgeste: mit Fortschritt erst nachfragen, sonst offen bleiben
-  useZurueckGeste(() => {
+  const geste = useZurueckGeste(() => {
     if (!hatFortschritt || window.confirm('Workout verwerfen? Erfasste Werte gehen verloren.')) {
       onClose()
       return true
@@ -629,7 +629,7 @@ export default function WorkoutModus({
   })
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
+    <div ref={geste} className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+7rem)]">
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
           <button onClick={abbrechen} className="-ml-2 h-11 px-2 text-txt3 active:text-txt">
