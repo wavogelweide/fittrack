@@ -4,7 +4,13 @@ import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YA
 import { db } from '../db/db'
 import { CARDIO_GERAETE, KRAFT_UEBUNGEN } from '../db/seed'
 import type { Goal } from '../db/types'
-import { berechneZielFortschritt, tageBisZiel, ZIEL_EINHEIT, ZIEL_TYP_LABELS } from '../logic/ziele'
+import {
+  berechneZielFortschritt,
+  bewerteAmbition,
+  tageBisZiel,
+  ZIEL_TYP_LABELS,
+  type AmbitionsBewertung,
+} from '../logic/ziele'
 
 const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const CARDIO_NAME = Object.fromEntries(CARDIO_GERAETE.map((g) => [g.id, g.name]))
@@ -20,15 +26,57 @@ function referenzName(ziel: Pick<Goal, 'typ' | 'referenz'>): string {
 
 const TYP_FARBE: Record<Goal['typ'], { balken: string; text: string; chart: string }> = {
   kraft_gewicht: { balken: 'bg-neon-lime', text: 'text-neon-lime', chart: 'var(--neon-lime)' },
+  cardio_leistung: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: 'var(--neon-cyan)' },
   cardio_zeit: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: 'var(--neon-cyan)' },
   cardio_distanz: { balken: 'bg-neon-cyan', text: 'text-neon-cyan', chart: 'var(--neon-cyan)' },
 }
+
+// Formulierung des Ziels in einem Satz, z. B. „5 km in 30 Min."
+function zielFormulierung(ziel: Goal): string | null {
+  if (ziel.typ === 'cardio_leistung' && ziel.zielDauerMin) {
+    return `${einheitFormat(ziel.zielwert)} km in ${ziel.zielDauerMin} Min.`
+  }
+  return null
+}
+
+const AMBITION_STIL: Record<AmbitionsBewertung['stufe'], { label: string; klasse: string }> = {
+  realistisch: { label: 'realistisch', klasse: 'border-ok/40 bg-ok/10 text-ok' },
+  ambitioniert: { label: 'ambitioniert', klasse: 'border-warn/40 bg-warn/10 text-warn' },
+  sehr_ambitioniert: {
+    label: 'sehr ambitioniert',
+    klasse: 'border-danger/40 bg-danger/15 text-danger',
+  },
+}
+
+function AmbitionsHinweis({ bewertung }: { bewertung: AmbitionsBewertung }) {
+  const stil = AMBITION_STIL[bewertung.stufe]
+  return (
+    <p className="mt-3 flex flex-wrap items-center gap-2 text-xs leading-relaxed text-muted">
+      <span className={`rounded-full border px-2 py-0.5 font-medium ${stil.klasse}`}>
+        {stil.label}
+      </span>
+      <span>
+        +{bewertung.steigerungProzent.toLocaleString('de-DE')} % nötig, ≈
+        {bewertung.proWocheProzent.toLocaleString('de-DE')} % pro Woche über {bewertung.wochen}{' '}
+        Wochen.
+        {bewertung.stufe === 'sehr_ambitioniert' &&
+          ' Tipp: Zieldatum nach hinten schieben oder ein Zwischenziel setzen.'}
+      </span>
+    </p>
+  )
+}
+
+// Nur diese Typen sind neu anlegbar – Langzeitziele mit Zieldatum
+const NEUE_ZIEL_TYPEN: Goal['typ'][] = ['kraft_gewicht', 'cardio_leistung']
 
 function NeuesZiel({ onFertig }: { onFertig: () => void }) {
   const [typ, setTyp] = useState<Goal['typ']>('kraft_gewicht')
   const [referenz, setReferenz] = useState('')
   const [zielwert, setZielwert] = useState('')
+  const [zielDauer, setZielDauer] = useState('')
   const [zieldatum, setZieldatum] = useState('')
+  const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
+  const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
 
   const referenzen =
     typ === 'kraft_gewicht'
@@ -36,7 +84,32 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
       : CARDIO_GERAETE
 
   const wert = parseFloat(zielwert.replace(',', '.'))
-  const gueltig = referenz !== '' && Number.isFinite(wert) && wert > 0
+  const dauer = parseFloat(zielDauer.replace(',', '.'))
+  const brauchtDauer = typ === 'cardio_leistung'
+  const gueltig =
+    referenz !== '' &&
+    Number.isFinite(wert) &&
+    wert > 0 &&
+    zieldatum !== '' &&
+    (!brauchtDauer || (Number.isFinite(dauer) && dauer > 0))
+
+  // Live-Einschätzung, wie realistisch das Ziel ist (sobald Eingaben vollständig)
+  const entwurf = gueltig
+    ? {
+        typ,
+        referenz,
+        zielwert: wert,
+        zielDauerMin: brauchtDauer ? dauer : undefined,
+        zieldatum,
+      }
+    : null
+  const bewertung = entwurf
+    ? bewerteAmbition(
+        entwurf,
+        berechneZielFortschritt(entwurf, maxWeights, logs).aktuell,
+        heute(),
+      )
+    : null
 
   const speichern = () => {
     if (!gueltig) return
@@ -45,7 +118,8 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
         typ,
         referenz,
         zielwert: wert,
-        zieldatum: zieldatum || undefined,
+        zielDauerMin: brauchtDauer ? dauer : undefined,
+        zieldatum,
         status: 'aktiv',
       })
       .then(onFertig)
@@ -57,7 +131,7 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
   return (
     <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
       <div className="space-y-2">
-        {(Object.keys(ZIEL_TYP_LABELS) as Goal['typ'][]).map((t) => (
+        {NEUE_ZIEL_TYPEN.map((t) => (
           <button
             key={t}
             onClick={() => {
@@ -93,7 +167,9 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-sm text-txt3">Zielwert ({ZIEL_EINHEIT[typ]})</span>
+          <span className="text-sm text-txt3">
+            {typ === 'kraft_gewicht' ? 'Zielgewicht (kg, 1RM)' : 'Distanz (km)'}
+          </span>
           <input
             type="number"
             inputMode="decimal"
@@ -103,8 +179,21 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
             className={feldKlasse}
           />
         </label>
+        {brauchtDauer && (
+          <label className="block">
+            <span className="text-sm text-txt3">in Zeit (Min.)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              value={zielDauer}
+              onChange={(e) => setZielDauer(e.target.value)}
+              className={feldKlasse}
+            />
+          </label>
+        )}
         <label className="block">
-          <span className="text-sm text-txt3">Zieldatum (optional)</span>
+          <span className="text-sm text-txt3">bis zum Datum</span>
           <input
             type="date"
             min={heute()}
@@ -114,6 +203,14 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
           />
         </label>
       </div>
+
+      {entwurf && typ === 'cardio_leistung' && (
+        <p className="mt-3 text-xs text-muted">
+          Zieltempo: {einheitFormat((wert / dauer) * 60)} km/h – gemessen an der
+          Durchschnittsgeschwindigkeit deiner Einheiten.
+        </p>
+      )}
+      {bewertung && <AmbitionsHinweis bewertung={bewertung} />}
 
       <button
         onClick={speichern}
@@ -133,6 +230,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
   const farbe = TYP_FARBE[ziel.typ]
   const tage = tageBisZiel(ziel.zieldatum, heute())
   const erreicht = ziel.status === 'erreicht' || f.erreicht
+  const bewertung = erreicht ? null : bewerteAmbition(ziel, f.aktuell, heute())
 
   // Erreichte Ziele automatisch markieren (Abschluss-Status)
   useEffect(() => {
@@ -158,8 +256,17 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold">{referenzName(ziel)}</p>
-          <p className="text-xs text-muted">{ZIEL_TYP_LABELS[ziel.typ]}</p>
+          <p className="font-semibold">
+            {referenzName(ziel)}
+            {zielFormulierung(ziel) && (
+              <span className="ml-2 font-normal text-txt3">{zielFormulierung(ziel)}</span>
+            )}
+          </p>
+          <p className="text-xs text-muted">
+            {ZIEL_TYP_LABELS[ziel.typ]}
+            {ziel.zieldatum &&
+              ` · bis ${ziel.zieldatum.slice(8, 10)}.${ziel.zieldatum.slice(5, 7)}.${ziel.zieldatum.slice(0, 4)}`}
+          </p>
         </div>
         {erreicht ? (
           <span className="shrink-0 rounded-full border border-neon-lime/40 bg-neon-lime/10 px-2 py-0.5 text-[11px] text-neon-lime">
@@ -183,7 +290,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
           {f.aktuell !== null ? einheitFormat(f.aktuell) : '–'}
         </span>
         <span className="text-muted">
-          / {einheitFormat(ziel.zielwert)} {f.einheit}
+          / {einheitFormat(f.zielVergleichswert)} {f.einheit}
         </span>
         <span className="ml-auto text-sm font-semibold text-txt3">{f.prozent} %</span>
       </div>
@@ -205,7 +312,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
                 contentStyle={{ background: 'var(--elev-solid)', border: '1px solid var(--line)', borderRadius: 12, color: 'var(--txt)' }}
                 formatter={(w) => [`${einheitFormat(Number(w))} ${f.einheit}`, 'Bestwert']}
               />
-              <ReferenceLine y={ziel.zielwert} stroke={farbe.chart} strokeDasharray="4 4" strokeOpacity={0.6} />
+              <ReferenceLine y={f.zielVergleichswert} stroke={farbe.chart} strokeDasharray="4 4" strokeOpacity={0.6} />
               <Line type="monotone" dataKey="wert" stroke={farbe.chart} strokeWidth={2} dot={{ r: 3, fill: farbe.chart }} />
             </LineChart>
           </ResponsiveContainer>
@@ -215,10 +322,14 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
           <p className="mt-3 text-xs leading-relaxed text-muted">
             {ziel.typ === 'kraft_gewicht'
               ? 'Noch keine Daten – trage ein Maximalgewicht ein oder protokolliere ein Workout mit dieser Übung.'
-              : 'Noch keine Daten – protokolliere eine Cardio-Einheit auf diesem Gerät.'}
+              : ziel.typ === 'cardio_leistung'
+                ? 'Noch keine Daten – protokolliere eine Cardio-Einheit mit Dauer und Distanz auf diesem Gerät.'
+                : 'Noch keine Daten – protokolliere eine Cardio-Einheit auf diesem Gerät.'}
           </p>
         )
       )}
+
+      {!erreicht && bewertung && <AmbitionsHinweis bewertung={bewertung} />}
 
       <button onClick={loeschen} className="mt-3 text-xs text-faint underline-offset-2 active:underline">
         Ziel löschen

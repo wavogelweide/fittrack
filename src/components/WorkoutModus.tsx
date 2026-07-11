@@ -5,6 +5,7 @@ import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
 import type { CardioTypeId } from '../db/types'
 import { arbeitsgewicht, einRMProUebung, ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
+import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
 import {
   entwurfZuLog,
   formatiereSekunden,
@@ -16,6 +17,7 @@ import {
   type WorkoutEntwurf,
 } from '../logic/workout'
 import ExerciseIllustration from './ExerciseIllustration'
+import { useZurueckGeste } from './zurueckGeste'
 
 const KRAFT_INFO = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u]))
 const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
@@ -217,12 +219,14 @@ function CardioKarte({
   onUpdate: (c: WorkoutEntwurf['cardio']) => void
 }) {
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const zone = ga1Zone(profil ?? {})
   const [runden, setRunden] = useState(8)
   const timer = useSekundenTimer()
   const vorherigePhase = useRef<string>('belastung')
 
   const status = intervallStatus(timer.vergangenSek, runden)
+  const tempo = empfohlenesIntervallTempo(logs, cardio.cardioType)
 
   // Signal beim Phasenwechsel (60/120-Intervalle)
   useEffect(() => {
@@ -374,10 +378,36 @@ function CardioKarte({
           <p className="text-6xl font-bold tabular-nums text-txt">
             {formatiereSekunden(status.verbleibendSek)}
           </p>
+          {tempo && status.phase !== 'fertig' && (
+            <p className="mt-1 text-lg font-semibold">
+              <span className={status.phase === 'belastung' ? 'text-warn' : 'text-neon-cyan'}>
+                Ziel{' '}
+                {formatiereTempoBereich(
+                  status.phase === 'belastung' ? tempo.belastung : tempo.erholung,
+                )}
+              </span>
+            </p>
+          )}
           <p className="mt-1 text-xs text-muted">
             Gesamt verbleibend {formatiereSekunden(status.gesamtVerbleibendSek)} · Signal beim
             Wechsel
           </p>
+          {tempo ? (
+            <p className="mt-3 rounded-xl border border-line bg-elev p-2.5 text-xs leading-relaxed text-txt3">
+              Dein Tempo: Belastung{' '}
+              <span className="font-semibold text-warn">{formatiereTempoBereich(tempo.belastung)}</span>
+              {' · '}Erholung{' '}
+              <span className="font-semibold text-neon-cyan">{formatiereTempoBereich(tempo.erholung)}</span>
+              <span className="block text-muted">
+                berechnet aus deinem Durchschnitt der letzten Einheiten ({kg(tempo.basisKmh)} km/h)
+              </span>
+            </p>
+          ) : (
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Protokolliere Einheiten mit Dauer und Distanz auf diesem Gerät, um berechnete
+              Belastungs- und Erholungstempi zu sehen.
+            </p>
+          )}
         </div>
       )}
 
@@ -469,8 +499,9 @@ function UebungsWahl({
   onSelect: (id: string) => void
   onClose: () => void
 }) {
+  const geste = useZurueckGeste(onClose)
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
+    <div ref={geste} className="fixed inset-0 z-[60] overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
           <h2 className="text-lg font-bold">{titel}</h2>
@@ -588,8 +619,17 @@ export default function WorkoutModus({
     }
   }
 
+  // Wischgeste: mit Fortschritt erst nachfragen, sonst offen bleiben
+  const geste = useZurueckGeste(() => {
+    if (!hatFortschritt || window.confirm('Workout verwerfen? Erfasste Werte gehen verloren.')) {
+      onClose()
+      return true
+    }
+    return false
+  })
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
+    <div ref={geste} className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+7rem)]">
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
           <button onClick={abbrechen} className="-ml-2 h-11 px-2 text-txt3 active:text-txt">

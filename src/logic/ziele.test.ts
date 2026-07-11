@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { MaxWeight, WorkoutLog } from '../db/types'
 import { geschaetztes1RM } from './einRM'
-import { berechneZielFortschritt, tageBisZiel } from './ziele'
+import {
+  berechneZielFortschritt,
+  bewerteAmbition,
+  geschwindigkeitKmh,
+  tageBisZiel,
+  zielVergleichswert,
+} from './ziele'
 
 const MAX_WEIGHTS: MaxWeight[] = [
   { id: 1, exerciseId: 'brustpresse', gewichtKg: 50, wiederholungen: 8, datum: '2026-06-01' },
@@ -125,6 +131,107 @@ describe('berechneZielFortschritt – ohne Daten', () => {
     expect(f.prozent).toBe(0)
     expect(f.erreicht).toBe(false)
     expect(f.verlauf).toEqual([])
+  })
+})
+
+describe('berechneZielFortschritt – Cardio-Leistung (Distanz in Zeit)', () => {
+  // Ziel: 5 km in 30 Min. auf dem Laufband → Zielgeschwindigkeit 10 km/h
+  const ziel = {
+    typ: 'cardio_leistung' as const,
+    referenz: 'laufband',
+    zielwert: 5,
+    zielDauerMin: 30,
+  }
+
+  it('misst den Fortschritt an der Durchschnittsgeschwindigkeit', () => {
+    // 4 km in 30 Min. = 8 km/h → 80 % der Zielgeschwindigkeit
+    const f = berechneZielFortschritt(ziel, [], LOGS)
+    // LOGS: Laufband 25 Min/4 km (9,6 km/h) und 35 Min/5,5 km (9,43 km/h)
+    expect(f.aktuell).toBeCloseTo(geschwindigkeitKmh(4, 25), 5)
+    expect(f.zielVergleichswert).toBe(10)
+    expect(f.prozent).toBe(96)
+    expect(f.erreicht).toBe(false)
+    expect(f.einheit).toBe('km/h')
+  })
+
+  it('gilt erst als erreicht, wenn die volle Distanz in der Zeit geschafft ist', () => {
+    // schnell, aber zu kurz: 3 km in 15 Min. (12 km/h) → 99 % Deckel, nicht erreicht
+    const kurz: WorkoutLog[] = [
+      {
+        id: 1,
+        datum: '2026-07-09',
+        typ: 'cardio',
+        eintraege: [{ art: 'cardio', cardioType: 'laufband', dauerMin: 15, distanzKm: 3 }],
+      },
+    ]
+    const f = berechneZielFortschritt(ziel, [], kurz)
+    expect(f.erreicht).toBe(false)
+    expect(f.prozent).toBe(99)
+
+    // volle Distanz innerhalb der Zeit → erreicht
+    const geschafft: WorkoutLog[] = [
+      {
+        id: 2,
+        datum: '2026-07-10',
+        typ: 'cardio',
+        eintraege: [{ art: 'cardio', cardioType: 'laufband', dauerMin: 29, distanzKm: 5 }],
+      },
+    ]
+    const f2 = berechneZielFortschritt(ziel, [], geschafft)
+    expect(f2.erreicht).toBe(true)
+    expect(f2.prozent).toBe(100)
+  })
+
+  it('ignoriert Einheiten ohne Distanz und liefert die Zielgeschwindigkeit', () => {
+    const f = berechneZielFortschritt(
+      { ...ziel, referenz: 'ergometer' }, // LOGS: Ergometer nur mit Dauer
+      [],
+      LOGS,
+    )
+    expect(f.aktuell).toBeNull()
+    expect(f.prozent).toBe(0)
+    expect(zielVergleichswert(ziel)).toBe(10)
+    expect(zielVergleichswert({ ...ziel, zielDauerMin: undefined })).toBe(0)
+  })
+})
+
+describe('bewerteAmbition', () => {
+  it('stuft moderate Wochensteigerungen als realistisch ein', () => {
+    // 1RM 100 → Ziel 106 in 12 Wochen ≈ 0,5 %/Woche
+    const b = bewerteAmbition(
+      { typ: 'kraft_gewicht', zielwert: 106, zieldatum: '2026-10-02' },
+      100,
+      '2026-07-10',
+    )
+    expect(b?.stufe).toBe('realistisch')
+    expect(b?.steigerungProzent).toBe(6)
+  })
+
+  it('stuft große Sprünge in kurzer Zeit als sehr ambitioniert ein', () => {
+    // +20 % in 4 Wochen = 5 %/Woche
+    const b = bewerteAmbition(
+      { typ: 'kraft_gewicht', zielwert: 120, zieldatum: '2026-08-07' },
+      100,
+      '2026-07-10',
+    )
+    expect(b?.stufe).toBe('sehr_ambitioniert')
+  })
+
+  it('nutzt bei Leistungszielen die Zielgeschwindigkeit', () => {
+    // aktuell 9 km/h, Ziel 10 km/h in ~8 Wochen ≈ 1,4 %/Woche → ambitioniert
+    const b = bewerteAmbition(
+      { typ: 'cardio_leistung', zielwert: 5, zielDauerMin: 30, zieldatum: '2026-09-04' },
+      9,
+      '2026-07-10',
+    )
+    expect(b?.stufe).toBe('ambitioniert')
+  })
+
+  it('liefert null ohne Daten, ohne Datum, überfällig oder wenn schon geschafft', () => {
+    expect(bewerteAmbition({ typ: 'kraft_gewicht', zielwert: 100, zieldatum: '2026-10-01' }, null, '2026-07-10')).toBeNull()
+    expect(bewerteAmbition({ typ: 'kraft_gewicht', zielwert: 100 }, 90, '2026-07-10')).toBeNull()
+    expect(bewerteAmbition({ typ: 'kraft_gewicht', zielwert: 100, zieldatum: '2026-07-01' }, 90, '2026-07-10')).toBeNull()
+    expect(bewerteAmbition({ typ: 'kraft_gewicht', zielwert: 100, zieldatum: '2026-10-01' }, 105, '2026-07-10')).toBeNull()
   })
 })
 
