@@ -10,6 +10,7 @@ import {
   type MusterErgebnis,
   type RatioErgebnis,
 } from '../logic/analyse'
+import StatistikSektion from './StatistikSektion'
 
 const UEBUNGS_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 
@@ -227,6 +228,8 @@ export default function AnalyseTab() {
 
   return (
     <div className="space-y-6">
+      <StatistikSektion />
+
       <section>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
           Haltungsmuster
