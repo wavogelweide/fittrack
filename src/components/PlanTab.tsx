@@ -15,8 +15,17 @@ const PRIO: Record<KraftVorschlag['prioritaet'], { label: string; klasse: string
 
 const kg = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 })
 
+// Progressions-Chips: automatische Steigerung/Reduktion aus der letzten Einheit
+const PROGRESSION_CHIP: Partial<
+  Record<NonNullable<KraftVorschlag['progression']>, { label: string; klasse: string }>
+> = {
+  steigern: { label: '↑ +2,5 kg', klasse: 'border-neon-lime/40 bg-neon-lime/10 text-neon-lime' },
+  reduzieren: { label: '↓ −5 %', klasse: 'border-warn/40 bg-warn/10 text-warn' },
+}
+
 function KraftZeile({ vorschlag }: { vorschlag: KraftVorschlag }) {
   const prio = PRIO[vorschlag.prioritaet]
+  const progression = vorschlag.progression && PROGRESSION_CHIP[vorschlag.progression]
   return (
     <li className="flex items-center gap-3 border-t border-hairline py-2.5 first:border-t-0">
       <ExerciseIllustration
@@ -30,6 +39,11 @@ function KraftZeile({ vorschlag }: { vorschlag: KraftVorschlag }) {
           {prio && (
             <span className={`rounded-full border px-2 py-0.5 text-[11px] ${prio.klasse}`}>
               {prio.label}
+            </span>
+          )}
+          {progression && (
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] ${progression.klasse}`}>
+              {progression.label}
             </span>
           )}
         </div>

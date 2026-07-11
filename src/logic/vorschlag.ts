@@ -1,8 +1,9 @@
 // Vorschlags-Engine nach vorgehensplan-fitness-app.md Abschnitt 5.3:
 // Aus Dysbalance-Flags, Haltungsmustern und 1RM-Werten wird ein Wochenplan generiert.
-import type { Trainingsziel } from '../db/types'
+import type { Trainingsziel, WorkoutLog } from '../db/types'
 import type { MusterErgebnis, RatioErgebnis } from './analyse'
-import { arbeitsgewicht, ZIEL_KONFIG } from './einRM'
+import { ZIEL_KONFIG } from './einRM'
+import { progressionsVorschlag, type ProgressionsVorschlag } from './progression'
 
 export interface KraftVorschlag {
   exerciseId: string
@@ -10,6 +11,7 @@ export interface KraftVorschlag {
   wdh: [number, number]
   gewichtKg: number | null // null = noch kein Maximalgewicht erfasst
   prioritaet: 'hoch' | 'normal' | 'erhaltung'
+  progression?: ProgressionsVorschlag['aktion']
   grund?: string
 }
 
@@ -44,6 +46,7 @@ export interface WochenplanInput {
   trainingsziel: Trainingsziel
   trainingstageProWoche: number
   ga1Zone?: { von: number; bis: number } | null
+  logs?: WorkoutLog[] // Protokoll für die automatische Progression
 }
 
 // Zwei alternierende Ganzkörper-Einheiten als Basis
@@ -82,7 +85,7 @@ const DEHNEN_BEI_DYSBALANCE: Record<string, Record<'zaehler_schwach' | 'nenner_s
 }
 
 export function erstelleWochenplan(input: WochenplanInput): Wochenplan {
-  const { einRMs, ratios, muster, trainingsziel, ga1Zone } = input
+  const { einRMs, ratios, muster, trainingsziel, ga1Zone, logs = [] } = input
   const tageAnzahl = Math.min(5, Math.max(2, input.trainingstageProWoche))
   const zielKonfig = ZIEL_KONFIG[trainingsziel]
   const hinweise: string[] = []
@@ -109,14 +112,20 @@ export function erstelleWochenplan(input: WochenplanInput): Wochenplan {
   const hohlkreuz = muster.find((m) => m.muster === 'hohlkreuz' && m.stufe !== 'unauffaellig')
 
   const baueKraft = (exerciseId: string, extraGrund?: string): KraftVorschlag => {
-    const einRM = einRMs[exerciseId]
+    // Automatische Progression: doppelte Progression auf 1RM-Basis
+    const prog = progressionsVorschlag(exerciseId, trainingsziel, einRMs[exerciseId] ?? null, logs)
     const vorschlag: KraftVorschlag = {
       exerciseId,
       saetze: 3,
       wdh: zielKonfig.wdh,
-      gewichtKg: einRM ? arbeitsgewicht(einRM, trainingsziel).empfohlenKg : null,
+      gewichtKg: prog.gewichtKg,
       prioritaet: 'normal',
-      grund: extraGrund,
+      progression: prog.aktion,
+      grund:
+        extraGrund ??
+        (prog.aktion === 'steigern' || prog.aktion === 'reduzieren'
+          ? (prog.grund ?? undefined)
+          : undefined),
     }
     if (schwach.has(exerciseId)) {
       vorschlag.saetze += 1

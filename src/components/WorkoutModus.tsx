@@ -5,6 +5,7 @@ import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
 import type { CardioTypeId } from '../db/types'
 import { arbeitsgewicht, einRMProUebung, ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
+import { PAUSEN_SEK, progressionsVorschlag } from '../logic/progression'
 import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
 import {
   entwurfZuLog,
@@ -543,7 +544,24 @@ export default function WorkoutModus({
   const [wahl, setWahl] = useState<'kraft' | 'dehnen' | null>(null)
   const [meldung, setMeldung] = useState<string | null>(null)
   const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
+  const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+
+  // Satzpause: startet automatisch nach jedem abgehakten Satz (Dauer je Ziel)
+  const [pause, setPause] = useState<{ endeTs: number; gesamtSek: number } | null>(null)
+  useEffect(() => {
+    if (!pause) return
+    const id = setInterval(() => {
+      if (Date.now() >= pause.endeTs) {
+        signalTon(880)
+        setTimeout(() => signalTon(1175, 300), 220)
+        setPause(null)
+      } else {
+        erzwingeTick((n) => n + 1)
+      }
+    }, 250)
+    return () => clearInterval(id)
+  }, [pause])
 
   // Dehn-Countdown: nur einer gleichzeitig, auf Zeitstempel-Basis
   const [dehnTimer, setDehnTimer] = useState<{ index: number; endeTs: number } | null>(null)
@@ -570,7 +588,8 @@ export default function WorkoutModus({
   const einRMs = einRMProUebung(maxWeights)
 
   const fuegeKraftHinzu = (exerciseId: string) => {
-    const einRM = einRMs[exerciseId]
+    // Gewicht aus der automatischen Progression (Historie + 1RM)
+    const prog = progressionsVorschlag(exerciseId, ziel, einRMs[exerciseId] ?? null, logs)
     setEntwurf((e) => ({
       ...e,
       kraft: [
@@ -578,7 +597,7 @@ export default function WorkoutModus({
         {
           exerciseId,
           saetze: Array.from({ length: 3 }, () => ({
-            gewichtKg: einRM ? arbeitsgewicht(einRM, ziel).empfohlenKg : null,
+            gewichtKg: prog.gewichtKg,
             wdh: mittlereWdh(ZIEL_KONFIG[ziel].wdh),
             erledigt: false,
           })),
@@ -656,9 +675,17 @@ export default function WorkoutModus({
             <KraftKarte
               key={`${k.exerciseId}-${i}`}
               eintrag={k}
-              onUpdate={(neu) =>
+              onUpdate={(neu) => {
+                // frisch abgehakter Satz → Satzpause starten (Signal am Ende)
+                const vorher = k.saetze.filter((s) => s.erledigt).length
+                const nachher = neu.saetze.filter((s) => s.erledigt).length
+                if (nachher > vorher) {
+                  signalTon(660, 80) // entsperrt Audio per Nutzer-Geste
+                  const sek = PAUSEN_SEK[ziel]
+                  setPause({ endeTs: Date.now() + sek * 1000, gesamtSek: sek })
+                }
                 setEntwurf((e) => ({ ...e, kraft: e.kraft.map((x, j) => (j === i ? neu : x)) }))
-              }
+              }}
               onRemove={() =>
                 setEntwurf((e) => ({ ...e, kraft: e.kraft.filter((_, j) => j !== i) }))
               }
@@ -736,6 +763,38 @@ export default function WorkoutModus({
           </button>
         </div>
       </div>
+
+      {pause && (
+        <div className="fixed inset-x-0 bottom-0 z-[55] px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+          <div className="mx-auto max-w-lg rounded-2xl border border-neon-cyan/40 bg-card p-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-widest text-neon-cyan">
+                Satzpause
+              </span>
+              <span className="min-w-14 text-2xl font-bold tabular-nums text-txt">
+                {formatiereSekunden(Math.max(0, Math.ceil((pause.endeTs - Date.now()) / 1000)))}
+              </span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-elev2">
+                <div
+                  className="h-full rounded-full bg-neon-cyan transition-[width] duration-300"
+                  style={{
+                    width: `${Math.max(0, Math.min(100, ((pause.endeTs - Date.now()) / 1000 / pause.gesamtSek) * 100))}%`,
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setPause(null)}
+                aria-label="Pause überspringen"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-elev text-txt3 active:bg-elev2"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {wahl === 'kraft' && (
         <UebungsWahl
