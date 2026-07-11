@@ -4,6 +4,7 @@ import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchExercise } from '../db/types'
 import { ga1Zone } from '../logic/puls'
 import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
+import { useZurueckGeste } from './zurueckGeste'
 import Chip from './Chip'
 import ExerciseIllustration from './ExerciseIllustration'
 import MaxGewicht from './MaxGewicht'
@@ -23,6 +24,7 @@ function Abschnitt({ titel, children }: { titel: string; children: React.ReactNo
 }
 
 export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; onClose: () => void }) {
+  useZurueckGeste(onClose)
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">

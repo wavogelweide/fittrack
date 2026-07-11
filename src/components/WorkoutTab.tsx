@@ -4,6 +4,7 @@ import { db } from '../db/db'
 import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
 import type { WorkoutEintrag, WorkoutLog } from '../db/types'
 import { fasseWorkoutZusammen } from '../logic/workout'
+import { useZurueckGeste } from './zurueckGeste'
 
 const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const DEHN_NAME = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u.name]))
@@ -65,6 +66,7 @@ function EintragDetail({ eintrag }: { eintrag: WorkoutEintrag }) {
 }
 
 function HistorieDetail({ log, onClose }: { log: WorkoutLog; onClose: () => void }) {
+  useZurueckGeste(onClose)
   const badge = TYP_BADGE[log.typ]
   const loeschen = () => {
     if (window.confirm('Dieses Workout aus der Historie löschen?')) {

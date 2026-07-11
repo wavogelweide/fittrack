@@ -17,6 +17,7 @@ import {
   type WorkoutEntwurf,
 } from '../logic/workout'
 import ExerciseIllustration from './ExerciseIllustration'
+import { useZurueckGeste } from './zurueckGeste'
 
 const KRAFT_INFO = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u]))
 const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
@@ -498,6 +499,7 @@ function UebungsWahl({
   onSelect: (id: string) => void
   onClose: () => void
 }) {
+  useZurueckGeste(onClose)
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
@@ -616,6 +618,15 @@ export default function WorkoutModus({
       onClose()
     }
   }
+
+  // Wischgeste: mit Fortschritt erst nachfragen, sonst offen bleiben
+  useZurueckGeste(() => {
+    if (!hatFortschritt || window.confirm('Workout verwerfen? Erfasste Werte gehen verloren.')) {
+      onClose()
+      return true
+    }
+    return false
+  })
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
