@@ -4,11 +4,13 @@ import {
   entwurfAusTag,
   entwurfZuLog,
   fasseWorkoutZusammen,
+  formatiereSaetzeKompakt,
   formatiereSekunden,
   intervallGesamtSek,
   intervallStatus,
   leererEntwurf,
   mittlereWdh,
+  tageSeitText,
   type WorkoutEntwurf,
 } from './workout'
 
@@ -105,6 +107,52 @@ describe('entwurfZuLog', () => {
       dehnen: [{ stretchId: 'kindhaltung', zielSek: 45, erledigt: true }],
     }
     expect(entwurfZuLog(entwurf, '2026-07-10')?.typ).toBe('dehnen')
+  })
+})
+
+describe('entwurfZuLog – Dauer', () => {
+  it('übernimmt die Workout-Dauer, lässt sie ohne Wert weg', () => {
+    const entwurf: WorkoutEntwurf = {
+      kraft: [],
+      cardio: null,
+      dehnen: [{ stretchId: 'kindhaltung', zielSek: 45, erledigt: true }],
+    }
+    expect(entwurfZuLog(entwurf, '2026-07-12', 52)?.dauerMin).toBe(52)
+    expect(entwurfZuLog(entwurf, '2026-07-12')?.dauerMin).toBeUndefined()
+    expect(entwurfZuLog(entwurf, '2026-07-12', 0)?.dauerMin).toBeUndefined()
+  })
+})
+
+describe('formatiereSaetzeKompakt', () => {
+  it('fasst gleiche Sätze zusammen, listet ungleiche auf', () => {
+    expect(
+      formatiereSaetzeKompakt([
+        { gewichtKg: 40, wdh: 12 },
+        { gewichtKg: 40, wdh: 12 },
+        { gewichtKg: 40, wdh: 12 },
+      ]),
+    ).toBe('3×12 @ 40 kg')
+    expect(
+      formatiereSaetzeKompakt([
+        { gewichtKg: 40, wdh: 12 },
+        { gewichtKg: 40, wdh: 10 },
+      ]),
+    ).toBe('40 kg: 12/10 Wdh.')
+    expect(
+      formatiereSaetzeKompakt([
+        { gewichtKg: 20, wdh: 15 },
+        { gewichtKg: 42.5, wdh: 10 },
+      ]),
+    ).toBe('20×15 · 42,5×10')
+    expect(formatiereSaetzeKompakt([])).toBe('')
+  })
+})
+
+describe('tageSeitText', () => {
+  it('formatiert heute, gestern und vor X Tagen', () => {
+    expect(tageSeitText('2026-07-12', '2026-07-12')).toBe('heute')
+    expect(tageSeitText('2026-07-11', '2026-07-12')).toBe('gestern')
+    expect(tageSeitText('2026-07-08', '2026-07-12')).toBe('vor 4 Tagen')
   })
 })
 

@@ -33,6 +33,11 @@ interface KraftEinheit {
 
 const kg = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 })
 
+// Jüngste protokollierte Einheit einer Übung (für die "Zuletzt: …"-Anzeige)
+export function letzteEinheit(exerciseId: string, logs: WorkoutLog[]): KraftEinheit | null {
+  return einheitenFuer(exerciseId, logs)[0] ?? null
+}
+
 // Kraft-Einheiten einer Übung aus dem Protokoll, neueste zuerst
 function einheitenFuer(exerciseId: string, logs: WorkoutLog[]): KraftEinheit[] {
   return [...logs]

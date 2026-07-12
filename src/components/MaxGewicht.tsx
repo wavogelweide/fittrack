@@ -4,6 +4,7 @@ import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { db } from '../db/db'
 import type { Exercise } from '../db/types'
 import { aktuellster1RM, arbeitsgewicht, geschaetztes1RM, ZIEL_KONFIG } from '../logic/einRM'
+import { kraftBestwerte } from '../logic/rekorde'
 
 const heute = () => new Date().toISOString().slice(0, 10)
 
@@ -16,6 +17,7 @@ export default function MaxGewicht({ uebung }: { uebung: Exercise }) {
       [uebung.id],
     ) ?? []
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
 
   const [gewicht, setGewicht] = useState('')
   const [wdh, setWdh] = useState('')
@@ -24,6 +26,7 @@ export default function MaxGewicht({ uebung }: { uebung: Exercise }) {
   const einRM = aktuellster1RM(eintraege)
   const ziel = profil?.trainingsziel ?? 'hypertrophie'
   const arbeit = einRM !== null ? arbeitsgewicht(einRM, ziel) : null
+  const best = kraftBestwerte(logs, eintraege)[uebung.id]
 
   const speichern = () => {
     const g = parseFloat(gewicht.replace(',', '.'))
@@ -68,6 +71,13 @@ export default function MaxGewicht({ uebung }: { uebung: Exercise }) {
       )}
       {einRM !== null && profil && (
         <p className="mt-2 text-xs text-muted">Trainingsziel: {ZIEL_KONFIG[ziel].label}</p>
+      )}
+      {best && (
+        <p className="mt-2 text-xs text-muted">
+          <span className="text-warn">★</span> Bestleistungen: schwerster Satz{' '}
+          <span className="font-semibold text-txt2">{kg(best.schwersterSatzKg)} kg</span> · bestes
+          1RM <span className="font-semibold text-txt2">{kg(best.bestes1RM)} kg</span>
+        </p>
       )}
 
       {chartDaten.length >= 2 && (

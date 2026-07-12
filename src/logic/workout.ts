@@ -74,6 +74,7 @@ export function leererEntwurf(): WorkoutEntwurf {
 export function entwurfZuLog(
   entwurf: WorkoutEntwurf,
   datum: string,
+  dauerMin?: number,
 ): Omit<WorkoutLog, 'id'> | null {
   const eintraege: WorkoutEintrag[] = []
   for (const k of entwurf.kraft) {
@@ -102,7 +103,35 @@ export function entwurfZuLog(
     : eintraege.some((e) => e.art === 'cardio')
       ? 'cardio'
       : 'dehnen'
-  return { datum, typ, eintraege }
+  return { datum, typ, eintraege, ...(dauerMin && dauerMin > 0 ? { dauerMin } : {}) }
+}
+
+// --- Anzeige-Helfer für "Zuletzt: …" ----------------------------------------
+
+// Sätze kompakt formatieren: "3×12 @ 40 kg" bzw. "40 kg: 12/10/8 Wdh."
+export function formatiereSaetzeKompakt(saetze: { gewichtKg: number; wdh: number }[]): string {
+  if (saetze.length === 0) return ''
+  const kg = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 })
+  const gewichte = new Set(saetze.map((s) => s.gewichtKg))
+  const wdhs = new Set(saetze.map((s) => s.wdh))
+  if (gewichte.size === 1 && wdhs.size === 1) {
+    return `${saetze.length}×${saetze[0].wdh} @ ${kg(saetze[0].gewichtKg)} kg`
+  }
+  if (gewichte.size === 1) {
+    return `${kg(saetze[0].gewichtKg)} kg: ${saetze.map((s) => s.wdh).join('/')} Wdh.`
+  }
+  return saetze.map((s) => `${kg(s.gewichtKg)}×${s.wdh}`).join(' · ')
+}
+
+// "heute", "gestern", "vor X Tagen"
+export function tageSeitText(datum: string, heute: string): string {
+  const tage = Math.round(
+    (new Date(`${heute}T12:00:00`).getTime() - new Date(`${datum}T12:00:00`).getTime()) /
+      (24 * 60 * 60 * 1000),
+  )
+  if (tage <= 0) return 'heute'
+  if (tage === 1) return 'gestern'
+  return `vor ${tage} Tagen`
 }
 
 // --- 60/120-Intervalle (Abschnitt 5.1b): 60 s Belastung / 120 s Erholung ----

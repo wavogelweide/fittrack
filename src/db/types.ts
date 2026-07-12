@@ -105,6 +105,7 @@ export interface WorkoutLog {
   id: number
   datum: string // ISO-Datum
   typ: 'kraft' | 'cardio' | 'dehnen'
+  dauerMin?: number // Gesamtdauer der Einheit (Start bis Abschluss)
   eintraege: WorkoutEintrag[]
 }
 

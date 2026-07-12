@@ -93,6 +93,7 @@ function HistorieDetail({ log, onClose }: { log: WorkoutLog; onClose: () => void
             </span>
           </div>
           <h2 className="text-2xl font-bold tracking-tight">{formatDatum(log.datum)}</h2>
+          {log.dauerMin && <p className="mt-0.5 text-sm text-muted">Dauer: {log.dauerMin} Min.</p>}
           <div className="mt-4">
             {log.eintraege.map((e, i) => (
               <EintragDetail key={i} eintrag={e} />
@@ -130,6 +131,7 @@ export default function WorkoutTab() {
               const z = fasseWorkoutZusammen(log)
               const badge = TYP_BADGE[log.typ]
               const teile = [
+                log.dauerMin && `${log.dauerMin} Min.`,
                 z.kraftUebungen > 0 &&
                   `${z.saetze} ${z.saetze === 1 ? 'Satz' : 'Sätze'} · ${kg(z.volumenKg)} kg Volumen`,
                 z.cardioMin > 0 && `${z.cardioMin} Min. Cardio`,

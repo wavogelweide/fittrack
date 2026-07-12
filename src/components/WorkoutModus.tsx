@@ -5,18 +5,22 @@ import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
 import type { CardioTypeId } from '../db/types'
 import { arbeitsgewicht, einRMProUebung, ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
-import { PAUSEN_SEK, progressionsVorschlag } from '../logic/progression'
+import { letzteEinheit, PAUSEN_SEK, progressionsVorschlag } from '../logic/progression'
 import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
 import {
   entwurfZuLog,
+  fasseWorkoutZusammen,
+  formatiereSaetzeKompakt,
   formatiereSekunden,
   intervallGesamtSek,
   intervallStatus,
   mittlereWdh,
+  tageSeitText,
   type CardioMethode,
   type KraftEntwurf,
   type WorkoutEntwurf,
 } from '../logic/workout'
+import { neueRekorde } from '../logic/rekorde'
 import ExerciseIllustration from './ExerciseIllustration'
 import { useZurueckGeste } from './zurueckGeste'
 
@@ -103,10 +107,12 @@ function CheckKreis({ aktiv, onToggle }: { aktiv: boolean; onToggle: () => void 
 
 function KraftKarte({
   eintrag,
+  zuletzt,
   onUpdate,
   onRemove,
 }: {
   eintrag: KraftEntwurf
+  zuletzt: string | null
   onUpdate: (k: KraftEntwurf) => void
   onRemove: () => void
 }) {
@@ -130,7 +136,10 @@ function KraftKarte({
           illustrationId={info?.illustrationId ?? eintrag.exerciseId}
           name={info?.name ?? eintrag.exerciseId}
         />
-        <p className="min-w-0 flex-1 font-medium">{info?.name ?? eintrag.exerciseId}</p>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">{info?.name ?? eintrag.exerciseId}</p>
+          {zuletzt && <p className="mt-0.5 text-xs text-muted">Zuletzt: {zuletzt}</p>}
+        </div>
         <button
           onClick={onRemove}
           aria-label="Übung entfernen"
@@ -543,9 +552,46 @@ export default function WorkoutModus({
   const [entwurf, setEntwurf] = useState(start)
   const [wahl, setWahl] = useState<'kraft' | 'dehnen' | null>(null)
   const [meldung, setMeldung] = useState<string | null>(null)
+  const [zusammenfassung, setZusammenfassung] = useState<{
+    dauerMin: number
+    saetze: number
+    volumenKg: number
+    cardioMin: number
+    dehnUebungen: number
+    rekorde: string[]
+  } | null>(null)
+  const startZeit = useRef(Date.now())
   const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+
+  // Bildschirm während des Workouts wachhalten (Wake Lock, iOS 16.4+);
+  // iOS gibt den Lock beim Wechsel in den Hintergrund frei → neu anfordern
+  useEffect(() => {
+    let lock: WakeLockSentinel | null = null
+    let aktiv = true
+    const anfordern = () => {
+      navigator.wakeLock
+        ?.request('screen')
+        .then((l) => {
+          if (aktiv) lock = l
+          else void l.release()
+        })
+        .catch(() => {
+          // Wake Lock ist optional (ältere Browser, Energiesparmodus)
+        })
+    }
+    anfordern()
+    const beiSichtbarkeit = () => {
+      if (document.visibilityState === 'visible' && aktiv) anfordern()
+    }
+    document.addEventListener('visibilitychange', beiSichtbarkeit)
+    return () => {
+      aktiv = false
+      document.removeEventListener('visibilitychange', beiSichtbarkeit)
+      void lock?.release().catch(() => {})
+    }
+  }, [])
 
   // Satzpause: startet automatisch nach jedem abgehakten Satz (Dauer je Ziel)
   const [pause, setPause] = useState<{ endeTs: number; gesamtSek: number } | null>(null)
@@ -624,12 +670,29 @@ export default function WorkoutModus({
     Boolean(entwurf.cardio?.dauerMin)
 
   const abschliessen = () => {
-    const log = entwurfZuLog(entwurf, heute())
+    const dauerMin = Math.max(1, Math.round((Date.now() - startZeit.current) / 60000))
+    const log = entwurfZuLog(entwurf, heute(), dauerMin)
     if (!log) {
       setMeldung('Noch nichts erfasst – hake mindestens einen Satz, Cardio oder eine Dehnübung ab.')
       return
     }
-    void db.workoutLogs.add(log).then(onClose)
+    // Rekorde gegen die Historie VOR dem Speichern ermitteln
+    const namen = Object.fromEntries([
+      ...KRAFT_UEBUNGEN.map((u) => [u.id, u.name]),
+      ...CARDIO_GERAETE.map((g) => [g.id, g.name]),
+    ])
+    const rekorde = neueRekorde(log, logs, maxWeights, namen)
+    const z = fasseWorkoutZusammen(log)
+    void db.workoutLogs.add(log).then(() =>
+      setZusammenfassung({
+        dauerMin,
+        saetze: z.saetze,
+        volumenKg: z.volumenKg,
+        cardioMin: z.cardioMin,
+        dehnUebungen: z.dehnUebungen,
+        rekorde,
+      }),
+    )
   }
 
   const abbrechen = () => {
@@ -638,14 +701,78 @@ export default function WorkoutModus({
     }
   }
 
-  // Wischgeste: mit Fortschritt erst nachfragen, sonst offen bleiben
+  // Wischgeste: nach dem Abschluss direkt schließen (schon gespeichert),
+  // sonst mit Fortschritt erst nachfragen
   const geste = useZurueckGeste(() => {
-    if (!hatFortschritt || window.confirm('Workout verwerfen? Erfasste Werte gehen verloren.')) {
+    if (zusammenfassung || !hatFortschritt || window.confirm('Workout verwerfen? Erfasste Werte gehen verloren.')) {
       onClose()
       return true
     }
     return false
   })
+
+  // Abschluss-Zusammenfassung nach dem Speichern
+  if (zusammenfassung) {
+    const kg = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 0 })
+    return (
+      <div ref={geste} className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-8">
+          <div className="rounded-2xl border border-neon-lime/40 bg-neon-lime/5 p-6 text-center backdrop-blur-md">
+            <p className="text-xs font-semibold uppercase tracking-widest text-neon-lime">
+              Einheit abgeschlossen
+            </p>
+            <p className="mt-3 text-6xl font-bold text-txt">{zusammenfassung.dauerMin}</p>
+            <p className="text-sm text-muted">Minuten · {titel}</p>
+
+            <div className="mt-5 grid grid-cols-3 gap-2 text-left">
+              <div className="rounded-xl border border-line bg-elev p-2.5">
+                <p className="text-xl font-bold text-txt">{zusammenfassung.saetze}</p>
+                <p className="text-xs text-muted">Sätze</p>
+              </div>
+              <div className="rounded-xl border border-line bg-elev p-2.5">
+                <p className="truncate text-xl font-bold text-txt">{kg(zusammenfassung.volumenKg)}</p>
+                <p className="text-xs text-muted">kg Volumen</p>
+              </div>
+              <div className="rounded-xl border border-line bg-elev p-2.5">
+                <p className="text-xl font-bold text-txt">
+                  {zusammenfassung.cardioMin > 0
+                    ? zusammenfassung.cardioMin
+                    : zusammenfassung.dehnUebungen}
+                </p>
+                <p className="text-xs text-muted">
+                  {zusammenfassung.cardioMin > 0 ? 'Min. Cardio' : 'Dehnübungen'}
+                </p>
+              </div>
+            </div>
+
+            {zusammenfassung.rekorde.length > 0 && (
+              <div className="mt-4 rounded-xl border border-warn/40 bg-warn/10 p-3 text-left">
+                <p className="text-xs font-semibold uppercase tracking-widest text-warn">
+                  ★ Neue Rekorde
+                </p>
+                <ul className="mt-1.5 space-y-1 text-sm leading-relaxed text-txt2">
+                  {zusammenfassung.rekorde.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              Der Wochenplan passt die Gewichte fürs nächste Mal automatisch an.
+            </p>
+
+            <button
+              onClick={onClose}
+              className="mt-5 h-13 w-full rounded-xl bg-neon-lime/90 py-3.5 text-base font-semibold text-onaccent transition-transform active:scale-[0.98]"
+            >
+              Fertig
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div ref={geste} className="fixed inset-0 z-50 overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
@@ -671,10 +798,17 @@ export default function WorkoutModus({
 
         <h3 className="mt-4 text-xs font-semibold uppercase tracking-widest text-muted">Kraft</h3>
         <div className="mt-2 space-y-3">
-          {entwurf.kraft.map((k, i) => (
+          {entwurf.kraft.map((k, i) => {
+            const letzte = letzteEinheit(k.exerciseId, logs)
+            return (
             <KraftKarte
               key={`${k.exerciseId}-${i}`}
               eintrag={k}
+              zuletzt={
+                letzte
+                  ? `${formatiereSaetzeKompakt(letzte.saetze)} · ${tageSeitText(letzte.datum, heute())}`
+                  : null
+              }
               onUpdate={(neu) => {
                 // frisch abgehakter Satz → Satzpause starten (Signal am Ende)
                 const vorher = k.saetze.filter((s) => s.erledigt).length
@@ -690,7 +824,8 @@ export default function WorkoutModus({
                 setEntwurf((e) => ({ ...e, kraft: e.kraft.filter((_, j) => j !== i) }))
               }
             />
-          ))}
+            )
+          })}
           <button
             onClick={() => setWahl('kraft')}
             className="h-12 w-full rounded-xl border border-dashed border-line-strong text-sm text-txt3 active:bg-elev"
