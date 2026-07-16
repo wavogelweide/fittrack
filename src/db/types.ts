@@ -131,6 +131,10 @@ export interface UserProfile {
   trainingsziel: Trainingsziel
   trainingstageProWoche: number
   selbstcheck?: SelbstcheckAntworten & { datum: string }
+  // Montag der letzten/aktuellen Deload-Woche (Entlastungswoche)
+  deloadWoche?: string
+  // Plananpassungen: Basis-exerciseId → Ersatz-exerciseId oder null (ausgeblendet)
+  planAnpassungen?: Record<string, string | null>
 }
 
 export interface Goal {

@@ -1,11 +1,18 @@
+import { useState } from 'react'
+import { db } from '../db/db'
 import { DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
+import { montagDerWoche } from '../logic/statistik'
+import { alternativeUebungen, setzeAnpassung } from '../logic/planAnpassung'
 import type { KraftVorschlag, TrainingsTag } from '../logic/vorschlag'
 import ExerciseIllustration from './ExerciseIllustration'
 import { useWochenplan } from './useWochenplan'
+import { useZurueckGeste } from './zurueckGeste'
 
 const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
 const KRAFT_ILLU = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.illustrationId]))
+
+const heute = () => new Date().toISOString().slice(0, 10)
 
 const PRIO: Record<KraftVorschlag['prioritaet'], { label: string; klasse: string } | null> = {
   hoch: { label: 'Priorität', klasse: 'border-neon-lime/40 bg-neon-lime/10 text-neon-lime' },
@@ -23,9 +30,28 @@ const PROGRESSION_CHIP: Partial<
   reduzieren: { label: '↓ −5 %', klasse: 'border-warn/40 bg-warn/10 text-warn' },
 }
 
-function KraftZeile({ vorschlag }: { vorschlag: KraftVorschlag }) {
+// Aktualisiert die Plananpassungen im Profil (Übung ersetzen / ausblenden / zurücksetzen)
+async function speichereAnpassung(exerciseId: string, wert: string | null | undefined) {
+  const profil = await db.userProfile.get(1)
+  await db.userProfile.put({
+    trainingsziel: 'hypertrophie',
+    trainingstageProWoche: 3,
+    ...profil,
+    id: 1,
+    planAnpassungen: setzeAnpassung(profil?.planAnpassungen, exerciseId, wert),
+  })
+}
+
+function KraftZeile({
+  vorschlag,
+  onMenu,
+}: {
+  vorschlag: KraftVorschlag
+  onMenu: (v: KraftVorschlag) => void
+}) {
   const prio = PRIO[vorschlag.prioritaet]
   const progression = vorschlag.progression && PROGRESSION_CHIP[vorschlag.progression]
+  const ersetzt = vorschlag.basisId && vorschlag.basisId !== vorschlag.exerciseId
   return (
     <li className="flex items-center gap-3 border-t border-hairline py-2.5 first:border-t-0">
       <ExerciseIllustration
@@ -46,13 +72,20 @@ function KraftZeile({ vorschlag }: { vorschlag: KraftVorschlag }) {
               {progression.label}
             </span>
           )}
+          {ersetzt && (
+            <span className="rounded-full border border-neon-cyan/40 bg-neon-cyan/10 px-2 py-0.5 text-[11px] text-neon-cyan">
+              ersetzt
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-sm text-txt3">
           {vorschlag.saetze} × {vorschlag.wdh[0]}–{vorschlag.wdh[1]} Wdh.
           {vorschlag.gewichtKg !== null ? (
             <span>
               {' · '}
-              <span className="font-semibold text-neon-lime">{kg(vorschlag.gewichtKg)} kg</span>
+              <span className={`font-semibold ${vorschlag.deload ? 'text-neon-cyan' : 'text-neon-lime'}`}>
+                {kg(vorschlag.gewichtKg)} kg
+              </span>
             </span>
           ) : (
             <span className="text-faint"> · Gewicht: 1RM fehlt</span>
@@ -60,11 +93,99 @@ function KraftZeile({ vorschlag }: { vorschlag: KraftVorschlag }) {
         </p>
         {vorschlag.grund && <p className="mt-0.5 text-xs text-muted">{vorschlag.grund}</p>}
       </div>
+      {vorschlag.basisId && (
+        <button
+          onClick={() => onMenu(vorschlag)}
+          aria-label="Übung anpassen"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-txt3 active:bg-elev2"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <circle cx="5" cy="12" r="1.6" />
+            <circle cx="12" cy="12" r="1.6" />
+            <circle cx="19" cy="12" r="1.6" />
+          </svg>
+        </button>
+      )}
     </li>
   )
 }
 
-function TagKarte({ tag, onStart }: { tag: TrainingsTag; onStart: (tag: TrainingsTag) => void }) {
+// Aktionsmenü: Übung ersetzen (Alternativen mit gleichem Muskel/Bewegung),
+// ausblenden oder auf Standard zurücksetzen
+function AnpassungsMenue({
+  vorschlag,
+  onClose,
+}: {
+  vorschlag: KraftVorschlag
+  onClose: () => void
+}) {
+  const basisId = vorschlag.basisId!
+  const ersetzt = basisId !== vorschlag.exerciseId
+  const alternativen = alternativeUebungen(basisId, KRAFT_UEBUNGEN)
+  const geste = useZurueckGeste(onClose)
+
+  const setze = async (wert: string | null | undefined) => {
+    await speichereAnpassung(basisId, wert)
+    onClose()
+  }
+
+  return (
+    <div ref={geste} className="fixed inset-0 z-[60] flex flex-col justify-end bg-black/50" onClick={onClose}>
+      <div
+        className="max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-line bg-card px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line-strong" />
+        <p className="text-sm font-semibold">{KRAFT_NAME[basisId] ?? basisId} anpassen</p>
+        <p className="mt-0.5 text-xs text-muted">
+          Ersetze die Übung durch eine Alternative für dieselbe Muskelgruppe oder blende sie aus.
+        </p>
+
+        <div className="mt-3 space-y-1.5">
+          {ersetzt && (
+            <button
+              onClick={() => void setze(undefined)}
+              className="flex h-12 w-full items-center rounded-xl border border-line bg-elev px-4 text-left text-sm text-neon-cyan active:bg-elev2"
+            >
+              ↺ Standardübung ({KRAFT_NAME[basisId]}) wiederherstellen
+            </button>
+          )}
+          {alternativen.map((alt) => (
+            <button
+              key={alt.id}
+              onClick={() => void setze(alt.id)}
+              className={`flex h-12 w-full items-center gap-3 rounded-xl border px-3 text-left text-sm active:bg-elev2 ${
+                alt.id === vorschlag.exerciseId
+                  ? 'border-neon-lime/40 bg-neon-lime/10 text-neon-lime'
+                  : 'border-line bg-elev text-txt'
+              }`}
+            >
+              <ExerciseIllustration klein illustrationId={alt.illustrationId} name={alt.name} />
+              <span className="min-w-0 flex-1 truncate">{alt.name}</span>
+              {alt.id === vorschlag.exerciseId && <span className="text-xs">aktiv</span>}
+            </button>
+          ))}
+          <button
+            onClick={() => void setze(null)}
+            className="flex h-12 w-full items-center rounded-xl border border-danger/30 bg-danger/10 px-4 text-left text-sm text-danger active:bg-danger/15"
+          >
+            ✕ Übung ausblenden
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TagKarte({
+  tag,
+  onStart,
+  onMenu,
+}: {
+  tag: TrainingsTag
+  onStart: (tag: TrainingsTag) => void
+  onMenu: (v: KraftVorschlag) => void
+}) {
   return (
     <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
       <div className="flex items-center justify-between gap-3">
@@ -86,7 +207,7 @@ function TagKarte({ tag, onStart }: { tag: TrainingsTag; onStart: (tag: Training
       <h3 className="mt-3 text-xs font-semibold uppercase tracking-widest text-muted">Kraft</h3>
       <ul className="mt-1">
         {tag.kraft.map((k) => (
-          <KraftZeile key={k.exerciseId} vorschlag={k} />
+          <KraftZeile key={`${k.basisId ?? ''}-${k.exerciseId}`} vorschlag={k} onMenu={onMenu} />
         ))}
       </ul>
 
@@ -116,6 +237,18 @@ function TagKarte({ tag, onStart }: { tag: TrainingsTag; onStart: (tag: Training
   )
 }
 
+// Deload-Woche starten/beenden über das Profil
+async function setzeDeloadWoche(wert: string | undefined) {
+  const profil = await db.userProfile.get(1)
+  await db.userProfile.put({
+    trainingsziel: 'hypertrophie',
+    trainingstageProWoche: 3,
+    ...profil,
+    id: 1,
+    deloadWoche: wert,
+  })
+}
+
 export default function PlanTab({
   onStart,
   onFreiesWorkout,
@@ -123,10 +256,42 @@ export default function PlanTab({
   onStart: (tag: TrainingsTag) => void
   onFreiesWorkout: () => void
 }) {
-  const { plan } = useWochenplan()
+  const { plan, deload } = useWochenplan()
+  const [menue, setMenue] = useState<KraftVorschlag | null>(null)
 
   return (
     <div className="space-y-4">
+      {deload.faellig && (
+        <div className="rounded-2xl border border-neon-cyan/40 bg-neon-cyan/5 p-4">
+          <p className="text-sm font-semibold text-neon-cyan">Deload-Woche empfohlen</p>
+          <p className="mt-1 text-sm leading-relaxed text-txt2">{deload.grund}</p>
+          <button
+            onClick={() => void setzeDeloadWoche(montagDerWoche(heute()))}
+            className="mt-3 h-11 w-full rounded-xl border border-neon-cyan/50 bg-neon-cyan/10 font-semibold text-neon-cyan active:bg-neon-cyan/20"
+          >
+            Deload-Woche starten
+          </button>
+        </div>
+      )}
+
+      {deload.aktiv && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-neon-cyan/40 bg-neon-cyan/5 p-4">
+          <p className="text-sm font-semibold text-neon-cyan">Deload-Woche aktiv</p>
+          <button
+            onClick={() => {
+              // Vorwoche als letzten Deload markieren, damit die Empfehlung
+              // nicht sofort wieder erscheint – die Zählung beginnt neu
+              const vorwoche = new Date(`${montagDerWoche(heute())}T12:00:00`)
+              vorwoche.setDate(vorwoche.getDate() - 7)
+              void setzeDeloadWoche(vorwoche.toISOString().slice(0, 10))
+            }}
+            className="h-9 shrink-0 rounded-lg border border-line bg-elev px-3 text-sm text-txt3 active:bg-elev2"
+          >
+            Beenden
+          </button>
+        </div>
+      )}
+
       {plan.hinweise.length > 0 && (
         <div className="rounded-2xl border border-warn/30 bg-warn/10 p-4">
           <ul className="space-y-1.5 text-sm leading-relaxed text-warn">
@@ -141,7 +306,7 @@ export default function PlanTab({
       )}
 
       {plan.tage.map((t) => (
-        <TagKarte key={t.nr} tag={t} onStart={onStart} />
+        <TagKarte key={t.nr} tag={t} onStart={onStart} onMenu={setMenue} />
       ))}
 
       <button
@@ -156,6 +321,8 @@ export default function PlanTab({
         sich automatisch an, sobald sich deine Maximalgewichte ändern. Alle Empfehlungen sind
         Schätzwerte und ersetzen keine physiotherapeutische oder ärztliche Beratung.
       </p>
+
+      {menue && <AnpassungsMenue vorschlag={menue} onClose={() => setMenue(null)} />}
     </div>
   )
 }

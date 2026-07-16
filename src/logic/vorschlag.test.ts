@@ -97,6 +97,42 @@ describe('Dysbalance-Priorisierung', () => {
   })
 })
 
+describe('Deload-Woche', () => {
+  it('reduziert Sätze und Gewicht und markiert die Übungen', () => {
+    const normal = erstelleWochenplan(baueInput())
+    const deloadPlan = erstelleWochenplan(baueInput({ deload: true }))
+    const brustNormal = normal.tage[0].kraft.find((k) => k.exerciseId === 'brustpresse')!
+    const brustDeload = deloadPlan.tage[0].kraft.find((k) => k.exerciseId === 'brustpresse')!
+    expect(brustDeload.saetze).toBeLessThan(brustNormal.saetze)
+    expect(brustDeload.gewichtKg!).toBeLessThan(brustNormal.gewichtKg!)
+    expect(brustDeload.deload).toBe(true)
+    expect(brustDeload.progression).toBeUndefined()
+    expect(deloadPlan.hinweise.some((h) => h.includes('Deload-Woche aktiv'))).toBe(true)
+  })
+
+  it('setzt in der Deload-Woche kein Dysbalance-Zusatzvolumen an', () => {
+    const einRMs = { ...AUSGEWOGEN, rudermaschine: 55 }
+    const plan = erstelleWochenplan(baueInput({ einRMs, deload: true }))
+    const rudern = plan.tage[0].kraft.find((k) => k.exerciseId === 'rudermaschine')!
+    expect(rudern.saetze).toBeLessThanOrEqual(2) // kein +1-Satz-Aufschlag
+  })
+})
+
+describe('Plananpassungen', () => {
+  it('ersetzt eine Basis-Übung und behält die Basis-Id für die UI', () => {
+    const plan = erstelleWochenplan(baueInput({ planAnpassungen: { brustpresse: 'butterfly' } }))
+    const tag = plan.tage[0].kraft
+    expect(tag.some((k) => k.exerciseId === 'brustpresse')).toBe(false)
+    const ersatz = tag.find((k) => k.exerciseId === 'butterfly')!
+    expect(ersatz.basisId).toBe('brustpresse')
+  })
+
+  it('blendet eine ausgeblendete Übung (null) aus dem Plan aus', () => {
+    const plan = erstelleWochenplan(baueInput({ planAnpassungen: { brustpresse: null } }))
+    expect(plan.tage[0].kraft.some((k) => k.basisId === 'brustpresse')).toBe(false)
+  })
+})
+
 describe('Haltungsblöcke', () => {
   it('Rundrücken: Reverse Fly + Brustdehnung/BWS-Rolle in jeder Einheit, Zug ≥ 2× Druck', () => {
     const ratios = berechneRatios({ ...AUSGEWOGEN, rudermaschine: 55 })

@@ -1,9 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { berechneRatios, bewerteHaltung } from '../logic/analyse'
+import { deloadEmpfehlung } from '../logic/deload'
 import { einRMProUebung } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
 import { erstelleWochenplan } from '../logic/vorschlag'
+
+const heute = () => new Date().toISOString().slice(0, 10)
 
 // Wochenplan aus Maximalgewichten, Analyse und Profil – genutzt von Plan- und Workout-Tab
 export function useWochenplan() {
@@ -14,6 +17,7 @@ export function useWochenplan() {
   const einRMs = einRMProUebung(maxWeights)
   const ratios = berechneRatios(einRMs)
   const muster = bewerteHaltung(ratios, profil?.selbstcheck)
+  const deload = deloadEmpfehlung(logs, heute(), profil?.deloadWoche)
   const plan = erstelleWochenplan({
     einRMs,
     ratios,
@@ -22,7 +26,9 @@ export function useWochenplan() {
     trainingstageProWoche: profil?.trainingstageProWoche ?? 3,
     ga1Zone: ga1Zone(profil ?? {}),
     logs,
+    deload: deload.aktiv,
+    planAnpassungen: profil?.planAnpassungen,
   })
 
-  return { plan, profil, einRMs }
+  return { plan, profil, einRMs, deload }
 }
