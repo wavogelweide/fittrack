@@ -3,6 +3,11 @@ import { db } from '../db/db'
 import { DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
 import { montagDerWoche } from '../logic/statistik'
 import { alternativeUebungen, setzeAnpassung } from '../logic/planAnpassung'
+import {
+  heutigerPlanTag,
+  standardWochentage,
+  wochentagFuerPlanTag,
+} from '../logic/trainingstage'
 import type { KraftVorschlag, TrainingsTag } from '../logic/vorschlag'
 import ExerciseIllustration from './ExerciseIllustration'
 import { useWochenplan } from './useWochenplan'
@@ -179,19 +184,35 @@ function AnpassungsMenue({
 
 function TagKarte({
   tag,
+  wochentag,
+  istHeute,
   onStart,
   onMenu,
 }: {
   tag: TrainingsTag
+  wochentag: string | null
+  istHeute: boolean
   onStart: (tag: TrainingsTag) => void
   onMenu: (v: KraftVorschlag) => void
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
+    <div
+      className={`rounded-2xl border p-4 backdrop-blur-md ${
+        istHeute ? 'border-neon-lime/50 bg-neon-lime/5' : 'border-line bg-elev'
+      }`}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-2xl font-bold text-txt">Tag {tag.nr}</span>
-          <span className="ml-2 text-sm text-muted">{tag.name}</span>
+          <span className="text-2xl font-bold text-txt">
+            Tag {tag.nr}
+            {wochentag && <span className="ml-1.5 text-lg font-semibold text-txt3">· {wochentag}</span>}
+          </span>
+          {istHeute && (
+            <span className="ml-2 rounded-full border border-neon-lime/50 bg-neon-lime/15 px-2 py-0.5 align-middle text-[11px] font-semibold text-neon-lime">
+              Heute
+            </span>
+          )}
+          <span className="block text-sm text-muted">{tag.name}</span>
         </div>
         <button
           onClick={() => onStart(tag)}
@@ -256,8 +277,19 @@ export default function PlanTab({
   onStart: (tag: TrainingsTag) => void
   onFreiesWorkout: () => void
 }) {
-  const { plan, deload } = useWochenplan()
+  const { plan, profil, deload } = useWochenplan()
   const [menue, setMenue] = useState<KraftVorschlag | null>(null)
+
+  // Wochentage der Trainingstage (aus dem Profil, sonst gleichmäßig verteilt);
+  // der heutige Trainingstag steht zuoberst und ist hervorgehoben
+  const wochentage = profil?.trainingsWochentage?.length
+    ? profil.trainingsWochentage
+    : standardWochentage(profil?.trainingstageProWoche ?? 3)
+  const heuteNr = heutigerPlanTag(wochentage, heute(), plan.tage.length)
+  const tageSortiert =
+    heuteNr === null
+      ? plan.tage
+      : [...plan.tage.filter((t) => t.nr === heuteNr), ...plan.tage.filter((t) => t.nr !== heuteNr)]
 
   return (
     <div className="space-y-4">
@@ -305,8 +337,15 @@ export default function PlanTab({
         </div>
       )}
 
-      {plan.tage.map((t) => (
-        <TagKarte key={t.nr} tag={t} onStart={onStart} onMenu={setMenue} />
+      {tageSortiert.map((t) => (
+        <TagKarte
+          key={t.nr}
+          tag={t}
+          wochentag={wochentagFuerPlanTag(wochentage, t.nr)}
+          istHeute={t.nr === heuteNr}
+          onStart={onStart}
+          onMenu={setMenue}
+        />
       ))}
 
       <button

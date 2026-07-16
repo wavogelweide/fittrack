@@ -26,10 +26,24 @@ const TAG: TrainingsTag = {
 }
 
 describe('entwurfAusTag', () => {
-  it('befüllt Sätze mit Arbeitsgewicht und mittlerer Wiederholungszahl vor', () => {
+  it('stellt Aufwärmsätze voran und befüllt Arbeitssätze mit Gewicht und mittlerer Wdh.', () => {
     const e = entwurfAusTag(TAG, { kindhaltung: 45 })
-    expect(e.kraft[0].saetze).toHaveLength(3)
-    expect(e.kraft[0].saetze[0]).toEqual({ gewichtKg: 42.5, wdh: 10, erledigt: false })
+    // 42,5 kg → 2 Aufwärmsätze (50 %/75 %) + 3 Arbeitssätze
+    expect(e.kraft[0].saetze).toHaveLength(5)
+    expect(e.kraft[0].saetze[0]).toEqual({
+      gewichtKg: 22.5,
+      wdh: 10,
+      erledigt: false,
+      aufwaermen: true,
+    })
+    expect(e.kraft[0].saetze[1]).toEqual({
+      gewichtKg: 32.5,
+      wdh: 5,
+      erledigt: false,
+      aufwaermen: true,
+    })
+    expect(e.kraft[0].saetze[2]).toEqual({ gewichtKg: 42.5, wdh: 10, erledigt: false })
+    // ohne Arbeitsgewicht keine Aufwärmsätze
     expect(e.kraft[1].saetze).toHaveLength(4)
     expect(e.kraft[1].saetze[0].gewichtKg).toBeNull()
   })

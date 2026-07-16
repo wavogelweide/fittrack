@@ -2,12 +2,14 @@
 // Entwürfe aus dem Wochenplan vorbefüllen, Intervall-Phasen berechnen,
 // erledigte Einträge in ein WorkoutLog überführen.
 import type { CardioTypeId, WorkoutEintrag, WorkoutLog } from '../db/types'
+import { aufwaermSaetze } from './aufwaermen'
 import type { TrainingsTag } from './vorschlag'
 
 export interface SatzEntwurf {
   gewichtKg: number | null // null = noch kein Arbeitsgewicht bekannt
   wdh: number
   erledigt: boolean
+  aufwaermen?: boolean // leichter Aufwärmsatz vor dem Arbeitsgewicht
 }
 
 export interface KraftEntwurf {
@@ -42,8 +44,18 @@ export function mittlereWdh(wdh: [number, number]): number {
   return Math.round((wdh[0] + wdh[1]) / 2)
 }
 
-// Entwurf aus einem Wochenplan-Tag: Sätze mit Arbeitsgewicht und mittlerer
-// Wiederholungszahl vorbefüllen, Dehnübungen mit ihrer Haltedauer
+// Aufwärmsätze als vorangestellte Satz-Entwürfe (leer, wenn Gewicht fehlt/leicht)
+export function aufwaermEntwuerfe(arbeitsgewichtKg: number | null): SatzEntwurf[] {
+  return aufwaermSaetze(arbeitsgewichtKg).map((s) => ({
+    gewichtKg: s.gewichtKg,
+    wdh: s.wdh,
+    erledigt: false,
+    aufwaermen: true,
+  }))
+}
+
+// Entwurf aus einem Wochenplan-Tag: Aufwärmsätze plus Sätze mit Arbeitsgewicht
+// und mittlerer Wiederholungszahl vorbefüllen, Dehnübungen mit ihrer Haltedauer
 export function entwurfAusTag(
   tag: TrainingsTag,
   halteDauerSek: Record<string, number>,
@@ -51,11 +63,14 @@ export function entwurfAusTag(
   return {
     kraft: tag.kraft.map((k) => ({
       exerciseId: k.exerciseId,
-      saetze: Array.from({ length: k.saetze }, () => ({
-        gewichtKg: k.gewichtKg,
-        wdh: mittlereWdh(k.wdh),
-        erledigt: false,
-      })),
+      saetze: [
+        ...aufwaermEntwuerfe(k.gewichtKg),
+        ...Array.from({ length: k.saetze }, () => ({
+          gewichtKg: k.gewichtKg,
+          wdh: mittlereWdh(k.wdh),
+          erledigt: false,
+        })),
+      ],
     })),
     cardio: { cardioType: 'laufband', methode: tag.cardio.methode },
     dehnen: tag.dehnen.map((d) => ({

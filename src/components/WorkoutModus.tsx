@@ -8,6 +8,7 @@ import { ga1Zone } from '../logic/puls'
 import { letzteEinheit, PAUSEN_SEK, progressionsVorschlag } from '../logic/progression'
 import { formatiereTempoBereich, intervallVorgabe } from '../logic/tempo'
 import {
+  aufwaermEntwuerfe,
   entwurfZuLog,
   fasseWorkoutZusammen,
   formatiereSaetzeKompakt,
@@ -30,10 +31,19 @@ const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
 const heute = () => new Date().toISOString().slice(0, 10)
 const kg = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 })
 
-// Signalton per WebAudio (kein Asset nötig, bleibt offline-fähig)
+// Signalton per WebAudio (kein Asset nötig, bleibt offline-fähig);
+// bei stummgeschaltetem Ton bleibt die Vibration als Hinweis erhalten
 let audioCtx: AudioContext | null = null
+let tonStumm = false
+export function setzeTonStumm(stumm: boolean) {
+  tonStumm = stumm
+}
 function signalTon(hoehe = 880, dauerMs = 180) {
   try {
+    if (tonStumm) {
+      navigator.vibrate?.(dauerMs)
+      return
+    }
     audioCtx ??= new AudioContext()
     const t = audioCtx.currentTime
     const osc = audioCtx.createOscillator()
@@ -108,11 +118,13 @@ function CheckKreis({ aktiv, onToggle }: { aktiv: boolean; onToggle: () => void 
 function KraftKarte({
   eintrag,
   zuletzt,
+  notiz,
   onUpdate,
   onRemove,
 }: {
   eintrag: KraftEntwurf
   zuletzt: string | null
+  notiz?: string
   onUpdate: (k: KraftEntwurf) => void
   onRemove: () => void
 }) {
@@ -139,6 +151,7 @@ function KraftKarte({
         <div className="min-w-0 flex-1">
           <p className="font-medium">{info?.name ?? eintrag.exerciseId}</p>
           {zuletzt && <p className="mt-0.5 text-xs text-muted">Zuletzt: {zuletzt}</p>}
+          {notiz && <p className="mt-0.5 text-xs text-neon-violet">Notiz: {notiz}</p>}
         </div>
         <button
           onClick={onRemove}
@@ -153,22 +166,29 @@ function KraftKarte({
 
       <ul className="mt-3 space-y-2">
         {eintrag.saetze.map((s, i) => (
-          <li key={i} className="flex items-center justify-between gap-2">
-            <CheckKreis aktiv={s.erledigt} onToggle={() => setzeSatz(i, { erledigt: !s.erledigt })} />
-            <Stepper
-              wert={s.gewichtKg}
-              schritt={2.5}
-              min={0}
-              einheit="kg"
-              onChange={(gewichtKg) => setzeSatz(i, { gewichtKg })}
-            />
-            <Stepper
-              wert={s.wdh}
-              schritt={1}
-              min={1}
-              einheit="Wdh."
-              onChange={(wdh) => setzeSatz(i, { wdh })}
-            />
+          <li key={i}>
+            {s.aufwaermen && (
+              <p className="mb-0.5 ml-12 text-[10px] font-semibold uppercase tracking-widest text-neon-cyan">
+                Aufwärmen
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <CheckKreis aktiv={s.erledigt} onToggle={() => setzeSatz(i, { erledigt: !s.erledigt })} />
+              <Stepper
+                wert={s.gewichtKg}
+                schritt={2.5}
+                min={0}
+                einheit="kg"
+                onChange={(gewichtKg) => setzeSatz(i, { gewichtKg })}
+              />
+              <Stepper
+                wert={s.wdh}
+                schritt={1}
+                min={1}
+                einheit="Wdh."
+                onChange={(wdh) => setzeSatz(i, { wdh })}
+              />
+            </div>
           </li>
         ))}
       </ul>
@@ -179,7 +199,11 @@ function KraftKarte({
             ...eintrag,
             saetze: [
               ...eintrag.saetze,
-              { ...(eintrag.saetze.at(-1) ?? { gewichtKg: null, wdh: 10 }), erledigt: false },
+              {
+                ...(eintrag.saetze.at(-1) ?? { gewichtKg: null, wdh: 10 }),
+                erledigt: false,
+                aufwaermen: undefined,
+              },
             ],
           })
         }
@@ -513,17 +537,52 @@ function UebungsWahl({
   onClose: () => void
 }) {
   const geste = useZurueckGeste(onClose)
+  const [suche, setSuche] = useState('')
+  const begriff = suche.trim().toLowerCase()
+  const gefiltert = begriff
+    ? eintraege.filter(
+        (e) =>
+          e.name.toLowerCase().includes(begriff) ||
+          (e.untertitel ?? '').toLowerCase().includes(begriff),
+      )
+    : eintraege
   return (
     <div ref={geste} className="fixed inset-0 z-[60] overflow-y-auto bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto max-w-lg px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-        <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-surface/90 px-4 py-3 backdrop-blur-lg">
-          <h2 className="text-lg font-bold">{titel}</h2>
-          <button onClick={onClose} className="h-10 px-2 text-txt3 active:text-txt">
-            Schließen
-          </button>
+        <div className="sticky top-0 z-10 -mx-4 bg-surface/90 px-4 pb-2 pt-3 backdrop-blur-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">{titel}</h2>
+            <button onClick={onClose} className="h-10 px-2 text-txt3 active:text-txt">
+              Schließen
+            </button>
+          </div>
+          <div className="relative mt-2">
+            <svg
+              viewBox="0 0 24 24"
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              type="search"
+              value={suche}
+              onChange={(e) => setSuche(e.target.value)}
+              placeholder="Übung suchen …"
+              aria-label="Übung suchen"
+              className="h-11 w-full rounded-xl border border-line bg-elev pl-10 pr-3 text-base text-txt placeholder-faint outline-none focus:border-line-strong"
+            />
+          </div>
         </div>
+        {gefiltert.length === 0 && (
+          <p className="mt-6 text-center text-sm text-muted">Keine Übung gefunden.</p>
+        )}
         <ul className="mt-1">
-          {eintraege.map((e) => (
+          {gefiltert.map((e) => (
             <li key={e.id}>
               <button
                 onClick={() => onSelect(e.id)}
@@ -635,6 +694,16 @@ export default function WorkoutModus({
 
   const ziel = profil?.trainingsziel ?? 'hypertrophie'
   const einRMs = einRMProUebung(maxWeights)
+  // Satzpause: eigene Einstellung aus dem Profil, sonst Standard je Trainingsziel;
+  // nach Aufwärmsätzen reicht eine kurze Pause
+  const pausenSek = profil?.pausenSek ?? PAUSEN_SEK[ziel]
+  const aufwaermPauseSek = Math.min(60, pausenSek)
+
+  // Signaltöne gemäß Profil stummschalten (Vibration bleibt)
+  useEffect(() => {
+    setzeTonStumm(profil?.tonAus ?? false)
+    return () => setzeTonStumm(false)
+  }, [profil?.tonAus])
 
   const fuegeKraftHinzu = (exerciseId: string) => {
     // Gewicht aus der automatischen Progression (Historie + 1RM)
@@ -645,11 +714,14 @@ export default function WorkoutModus({
         ...e.kraft,
         {
           exerciseId,
-          saetze: Array.from({ length: 3 }, () => ({
-            gewichtKg: prog.gewichtKg,
-            wdh: mittlereWdh(ZIEL_KONFIG[ziel].wdh),
-            erledigt: false,
-          })),
+          saetze: [
+            ...aufwaermEntwuerfe(prog.gewichtKg),
+            ...Array.from({ length: 3 }, () => ({
+              gewichtKg: prog.gewichtKg,
+              wdh: mittlereWdh(ZIEL_KONFIG[ziel].wdh),
+              erledigt: false,
+            })),
+          ],
         },
       ],
     }))
@@ -812,13 +884,14 @@ export default function WorkoutModus({
                   ? `${formatiereSaetzeKompakt(letzte.saetze)} · ${tageSeitText(letzte.datum, heute())}`
                   : null
               }
+              notiz={profil?.uebungsNotizen?.[k.exerciseId]}
               onUpdate={(neu) => {
-                // frisch abgehakter Satz → Satzpause starten (Signal am Ende)
-                const vorher = k.saetze.filter((s) => s.erledigt).length
-                const nachher = neu.saetze.filter((s) => s.erledigt).length
-                if (nachher > vorher) {
+                // frisch abgehakter Satz → Satzpause starten (Signal am Ende);
+                // nach einem Aufwärmsatz nur die kurze Pause
+                const frisch = neu.saetze.findIndex((s, j) => s.erledigt && !k.saetze[j]?.erledigt)
+                if (frisch !== -1) {
                   signalTon(660, 80) // entsperrt Audio per Nutzer-Geste
-                  const sek = PAUSEN_SEK[ziel]
+                  const sek = neu.saetze[frisch].aufwaermen ? aufwaermPauseSek : pausenSek
                   setPause({ endeTs: Date.now() + sek * 1000, gesamtSek: sek })
                 }
                 setEntwurf((e) => ({ ...e, kraft: e.kraft.map((x, j) => (j === i ? neu : x)) }))

@@ -4,6 +4,9 @@ import { db } from '../db/db'
 import type { Trainingsziel, UserProfile } from '../db/types'
 import { ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
+import { PAUSEN_SEK } from '../logic/progression'
+import { standardWochentage, WOCHENTAG_KURZ } from '../logic/trainingstage'
+import { formatiereSekunden } from '../logic/workout'
 import Datensicherung from './Datensicherung'
 import { gespeicherteWahl, setzeTheme, type ThemeWahl } from './theme'
 
@@ -87,6 +90,9 @@ export default function ProfilTab() {
   const zone = ga1Zone(profil ?? {})
   const ziel = profil?.trainingsziel ?? STANDARD.trainingsziel
   const tage = profil?.trainingstageProWoche ?? STANDARD.trainingstageProWoche
+  const wochentage = profil?.trainingsWochentage ?? standardWochentage(tage)
+  const standardPause = PAUSEN_SEK[ziel]
+  const pause = profil?.pausenSek ?? standardPause
 
   return (
     <div className="space-y-6">
@@ -150,7 +156,9 @@ export default function ProfilTab() {
           {[2, 3, 4, 5].map((t) => (
             <button
               key={t}
-              onClick={() => speichere({ trainingstageProWoche: t })}
+              onClick={() =>
+                speichere({ trainingstageProWoche: t, trainingsWochentage: standardWochentage(t) })
+              }
               className={`h-14 flex-1 rounded-xl border text-xl font-bold transition-colors ${
                 tage === t
                   ? 'border-neon-lime/50 bg-neon-lime/10 text-neon-lime'
@@ -160,6 +168,108 @@ export default function ProfilTab() {
               {t}
             </button>
           ))}
+        </div>
+
+        <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-muted">
+          An diesen Wochentagen
+        </h3>
+        <div className="flex gap-1.5">
+          {WOCHENTAG_KURZ.map((label, i) => {
+            const aktiv = wochentage.includes(i)
+            return (
+              <button
+                key={label}
+                onClick={() => {
+                  const neu = aktiv
+                    ? wochentage.filter((t) => t !== i)
+                    : [...wochentage, i].sort((a, b) => a - b)
+                  speichere({ trainingsWochentage: neu })
+                }}
+                className={`h-11 flex-1 rounded-xl border text-sm font-semibold transition-colors ${
+                  aktiv
+                    ? 'border-neon-lime/50 bg-neon-lime/10 text-neon-lime'
+                    : 'border-line bg-elev text-txt3'
+               }`}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        {wochentage.length !== tage && (
+          <p className="mt-2 text-xs text-warn">
+            {wochentage.length} Wochentag{wochentage.length === 1 ? '' : 'e'} gewählt, aber {tage}{' '}
+            Trainingstage pro Woche eingestellt.
+          </p>
+        )}
+        <p className="mt-2 text-xs leading-relaxed text-muted">
+          Der Plan hebt den heutigen Trainingstag auf der Startseite hervor.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
+          Satzpause & Signale
+        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-txt3">Pause zwischen Sätzen</span>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => speichere({ pausenSek: Math.max(15, pause - 15) })}
+              aria-label="Pause verringern"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-elev text-xl text-txt2 active:bg-elev2"
+            >
+              −
+            </button>
+            <span className="min-w-16 text-center">
+              <span className="text-lg font-semibold tabular-nums">{formatiereSekunden(pause)}</span>
+              <span className="block text-[10px] leading-none text-muted">Min.</span>
+            </span>
+            <button
+              onClick={() => speichere({ pausenSek: Math.min(600, pause + 15) })}
+              aria-label="Pause erhöhen"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-elev text-xl text-txt2 active:bg-elev2"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted">
+          Standard für {ZIEL_KONFIG[ziel].label}: {formatiereSekunden(standardPause)} Min.
+          {profil?.pausenSek !== undefined && profil.pausenSek !== standardPause && (
+            <>
+              {' '}
+              <button
+                onClick={() => speichere({ pausenSek: undefined })}
+                className="text-neon-cyan underline underline-offset-2"
+              >
+                Zurücksetzen
+              </button>
+            </>
+          )}
+        </p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <span className="text-sm text-txt3">Signaltöne (Vibration bleibt an)</span>
+          <div className="flex gap-2">
+            {(
+              [
+                [false, 'An'],
+                [true, 'Aus'],
+              ] as const
+            ).map(([aus, label]) => (
+              <button
+                key={label}
+                onClick={() => speichere({ tonAus: aus })}
+                className={`h-11 w-16 rounded-xl border text-sm font-medium transition-colors ${
+                  (profil?.tonAus ?? false) === aus
+                    ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
+                    : 'border-line bg-elev text-txt3'
+               }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
@@ -79,8 +80,49 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
         </Abschnitt>
       )}
 
+      <NotizSektion exerciseId={uebung.id} />
+
       <MaxGewicht uebung={uebung} />
     </>
+  )
+}
+
+// Persönliche Maschinen-Notiz (Sitzhöhe, Einstellungen …) – wird im
+// Workout-Modus an der Übung angezeigt
+function NotizSektion({ exerciseId }: { exerciseId: string }) {
+  const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  // lokaler Text gegen Cursor-Sprünge; aus dem Profil initialisiert
+  const [text, setText] = useState<string | null>(null)
+  const wert = text ?? profil?.uebungsNotizen?.[exerciseId] ?? ''
+
+  const speichere = (neu: string) => {
+    setText(neu)
+    const notizen = { ...profil?.uebungsNotizen }
+    if (neu.trim()) notizen[exerciseId] = neu
+    else delete notizen[exerciseId]
+    void db.userProfile.put({
+      trainingsziel: 'hypertrophie',
+      trainingstageProWoche: 3,
+      ...profil,
+      id: 1,
+      uebungsNotizen: notizen,
+    })
+  }
+
+  return (
+    <Abschnitt titel="Meine Maschinen-Notiz">
+      <textarea
+        value={wert}
+        onChange={(e) => speichere(e.target.value)}
+        rows={2}
+        placeholder="z. B. Sitz auf Stufe 4, Griff eng …"
+        aria-label="Maschinen-Notiz"
+        className="w-full rounded-xl border border-line bg-elev px-3 py-2.5 text-base text-txt placeholder-faint outline-none focus:border-line-strong"
+      />
+      <p className="mt-1 text-xs text-muted">
+        Wird im Workout-Modus direkt an der Übung angezeigt.
+      </p>
+    </Abschnitt>
   )
 }
 

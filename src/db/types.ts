@@ -135,6 +135,14 @@ export interface UserProfile {
   deloadWoche?: string
   // Plananpassungen: Basis-exerciseId → Ersatz-exerciseId oder null (ausgeblendet)
   planAnpassungen?: Record<string, string | null>
+  // Feste Wochentage der Trainingstage (0 = Montag … 6 = Sonntag)
+  trainingsWochentage?: number[]
+  // Persönliche Maschinen-Notizen je Übung (Sitzhöhe, Einstellungen …)
+  uebungsNotizen?: Record<string, string>
+  // Eigene Satzpause in Sekunden (statt des Standards je Trainingsziel)
+  pausenSek?: number
+  // Signaltöne stummschalten (Vibration bleibt aktiv)
+  tonAus?: boolean
 }
 
 export interface Goal {
