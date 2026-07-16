@@ -6,7 +6,7 @@ import type { CardioTypeId } from '../db/types'
 import { arbeitsgewicht, einRMProUebung, ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
 import { letzteEinheit, PAUSEN_SEK, progressionsVorschlag } from '../logic/progression'
-import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
+import { formatiereTempoBereich, intervallVorgabe } from '../logic/tempo'
 import {
   entwurfZuLog,
   fasseWorkoutZusammen,
@@ -230,13 +230,14 @@ function CardioKarte({
 }) {
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
+  const goals = useLiveQuery(() => db.goals.toArray(), []) ?? []
   const zone = ga1Zone(profil ?? {})
   const [runden, setRunden] = useState(8)
   const timer = useSekundenTimer()
   const vorherigePhase = useRef<string>('belastung')
 
   const status = intervallStatus(timer.vergangenSek, runden)
-  const tempo = empfohlenesIntervallTempo(logs, cardio.cardioType)
+  const tempo = intervallVorgabe(logs, goals, cardio.cardioType, heute())
 
   // Signal beim Phasenwechsel (60/120-Intervalle)
   useEffect(() => {
@@ -409,7 +410,9 @@ function CardioKarte({
               {' · '}Erholung{' '}
               <span className="font-semibold text-neon-cyan">{formatiereTempoBereich(tempo.erholung)}</span>
               <span className="block text-muted">
-                berechnet aus deinem Durchschnitt der letzten Einheiten ({kg(tempo.basisKmh)} km/h)
+                {tempo.quelle === 'ziel'
+                  ? `aus deinem Ziel ${kg(tempo.zielKmh!)} km/h bis ${tempo.zieldatum!.slice(8, 10)}.${tempo.zieldatum!.slice(5, 7)}. – Wochenziel ${kg(tempo.wochenZielKmh!)} km/h`
+                  : `berechnet aus deinem Durchschnitt der letzten Einheiten (${kg(tempo.basisKmh)} km/h)`}
               </span>
             </p>
           ) : (

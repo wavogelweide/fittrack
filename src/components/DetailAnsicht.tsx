@@ -3,7 +3,7 @@ import { db } from '../db/db'
 import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchExercise } from '../db/types'
 import { ga1Zone } from '../logic/puls'
-import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
+import { formatiereTempoBereich, intervallVorgabe } from '../logic/tempo'
 import { useZurueckGeste } from './zurueckGeste'
 import Chip from './Chip'
 import ExerciseIllustration from './ExerciseIllustration'
@@ -87,8 +87,9 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
 function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
+  const goals = useLiveQuery(() => db.goals.toArray(), []) ?? []
   const zone = ga1Zone(profil ?? {})
-  const tempo = empfohlenesIntervallTempo(logs, geraet.id)
+  const tempo = intervallVorgabe(logs, goals, geraet.id, new Date().toISOString().slice(0, 10))
   return (
     <>
       <h2 className="text-3xl font-bold tracking-tight">{geraet.name}</h2>
@@ -136,8 +137,9 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
                 {' · '}Erholung{' '}
                 <span className="font-bold text-neon-cyan">{formatiereTempoBereich(tempo.erholung)}</span>
                 <span className="block text-xs text-muted">
-                  aus deinem Durchschnittstempo der letzten Einheiten (
-                  {tempo.basisKmh.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h)
+                  {tempo.quelle === 'ziel'
+                    ? `aus deinem Ziel ${tempo.zielKmh!.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h bis ${tempo.zieldatum!.slice(8, 10)}.${tempo.zieldatum!.slice(5, 7)}. – Wochenziel ${tempo.wochenZielKmh!.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h`
+                    : `aus deinem Durchschnittstempo der letzten Einheiten (${tempo.basisKmh.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h)`}
                 </span>
               </p>
             ) : (
