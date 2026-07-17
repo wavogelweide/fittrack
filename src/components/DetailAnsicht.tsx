@@ -40,7 +40,7 @@ export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; 
         </button>
 
         <div className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
-          {auswahl.typ === 'kraft' && <KraftDetail uebung={auswahl.uebung} />}
+          {auswahl.typ === 'kraft' && <KraftDetail uebung={auswahl.uebung} onClose={onClose} />}
           {auswahl.typ === 'cardio' && <CardioDetail geraet={auswahl.geraet} />}
           {auswahl.typ === 'dehnen' && <DehnDetail uebung={auswahl.uebung} />}
         </div>
@@ -49,11 +49,28 @@ export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; 
   )
 }
 
-function KraftDetail({ uebung }: { uebung: Exercise }) {
+function KraftDetail({ uebung, onClose }: { uebung: Exercise; onClose?: () => void }) {
+  // Eigene Übung löschen: auch als Plan-Ersatz austragen; Historie bleibt
+  const loeschen = async () => {
+    if (!window.confirm(`„${uebung.name}" löschen? Protokollierte Workouts bleiben erhalten.`)) return
+    const profil = await db.userProfile.get(1)
+    if (profil?.planAnpassungen) {
+      const bereinigt = Object.fromEntries(
+        Object.entries(profil.planAnpassungen).filter(
+          ([basisId, ersatz]) => basisId !== uebung.id && ersatz !== uebung.id,
+        ),
+      )
+      await db.userProfile.put({ ...profil, planAnpassungen: bereinigt })
+    }
+    await db.exercises.delete(uebung.id)
+    onClose?.()
+  }
+
   return (
     <>
       <div className="mb-1 flex flex-wrap gap-2">
         <Chip text={BEWEGUNGSTYP_LABELS[uebung.bewegungsTyp]} farbe="lime" />
+        {uebung.eigene && <Chip text="Eigene Übung" farbe="cyan" />}
       </div>
       <h2 className="text-3xl font-bold tracking-tight">{uebung.name}</h2>
       <p className="mt-1 text-sm text-txt3">Maschine: {uebung.maschine}</p>
@@ -83,6 +100,15 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
       <NotizSektion exerciseId={uebung.id} />
 
       <MaxGewicht uebung={uebung} />
+
+      {uebung.eigene && (
+        <button
+          onClick={() => void loeschen()}
+          className="mt-6 h-12 w-full rounded-xl border border-danger/30 bg-danger/10 text-sm text-danger active:bg-danger/15"
+        >
+          Eigene Übung löschen
+        </button>
+      )}
     </>
   )
 }

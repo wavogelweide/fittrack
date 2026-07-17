@@ -30,5 +30,5 @@ export function useWochenplan() {
     planAnpassungen: profil?.planAnpassungen,
   })
 
-  return { plan, profil, einRMs, deload }
+  return { plan, profil, einRMs, deload, logs, maxWeights }
 }

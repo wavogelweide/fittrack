@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
-import type { CardioTypeId } from '../db/types'
+import { CARDIO_GERAETE, DEHN_UEBUNGEN } from '../db/seed'
+import type { CardioTypeId, Exercise } from '../db/types'
 import { arbeitsgewicht, einRMProUebung, ZIEL_KONFIG } from '../logic/einRM'
 import { ga1Zone } from '../logic/puls'
 import { letzteEinheit, PAUSEN_SEK, progressionsVorschlag } from '../logic/progression'
@@ -23,9 +23,9 @@ import {
 } from '../logic/workout'
 import { neueRekorde } from '../logic/rekorde'
 import ExerciseIllustration from './ExerciseIllustration'
+import { useKraftUebungen } from './useKraftUebungen'
 import { useZurueckGeste } from './zurueckGeste'
 
-const KRAFT_INFO = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u]))
 const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
 
 const heute = () => new Date().toISOString().slice(0, 10)
@@ -119,16 +119,17 @@ function KraftKarte({
   eintrag,
   zuletzt,
   notiz,
+  info,
   onUpdate,
   onRemove,
 }: {
   eintrag: KraftEntwurf
   zuletzt: string | null
   notiz?: string
+  info?: Exercise
   onUpdate: (k: KraftEntwurf) => void
   onRemove: () => void
 }) {
-  const info = KRAFT_INFO[eintrag.exerciseId]
   const setzeSatz = (i: number, patch: Partial<KraftEntwurf['saetze'][number]>) =>
     onUpdate({
       ...eintrag,
@@ -626,6 +627,8 @@ export default function WorkoutModus({
   const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const kraftUebungen = useKraftUebungen()
+  const kraftInfo = Object.fromEntries(kraftUebungen.map((u) => [u.id, u]))
 
   // Bildschirm während des Workouts wachhalten (Wake Lock, iOS 16.4+);
   // iOS gibt den Lock beim Wechsel in den Hintergrund frei → neu anfordern
@@ -753,7 +756,7 @@ export default function WorkoutModus({
     }
     // Rekorde gegen die Historie VOR dem Speichern ermitteln
     const namen = Object.fromEntries([
-      ...KRAFT_UEBUNGEN.map((u) => [u.id, u.name]),
+      ...kraftUebungen.map((u) => [u.id, u.name]),
       ...CARDIO_GERAETE.map((g) => [g.id, g.name]),
     ])
     const rekorde = neueRekorde(log, logs, maxWeights, namen)
@@ -885,6 +888,7 @@ export default function WorkoutModus({
                   : null
               }
               notiz={profil?.uebungsNotizen?.[k.exerciseId]}
+              info={kraftInfo[k.exerciseId]}
               onUpdate={(neu) => {
                 // frisch abgehakter Satz → Satzpause starten (Signal am Ende);
                 // nach einem Aufwärmsatz nur die kurze Pause
@@ -1010,7 +1014,7 @@ export default function WorkoutModus({
       {wahl === 'kraft' && (
         <UebungsWahl
           titel="Kraftübung wählen"
-          eintraege={[...KRAFT_UEBUNGEN]
+          eintraege={[...kraftUebungen]
             .sort((a, b) => a.name.localeCompare(b.name, 'de'))
             .map((u) => ({
               id: u.id,

@@ -1,7 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { db } from '../db/db'
-import { KRAFT_UEBUNGEN } from '../db/seed'
 import { BEWEGUNGSTYP_LABELS } from '../db/labels'
 import type { BewegungsTyp } from '../db/types'
 import {
@@ -10,8 +9,8 @@ import {
   vorWochen,
   wochenStatistik,
 } from '../logic/statistik'
+import { useKraftUebungen } from './useKraftUebungen'
 
-const BEWEGUNGSTYP_VON = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.bewegungsTyp]))
 const TYP_REIHENFOLGE: BewegungsTyp[] = ['push', 'pull', 'legs_front', 'legs_back', 'core']
 
 const heute = () => new Date().toISOString().slice(0, 10)
@@ -35,6 +34,7 @@ function Kachel({ wert, einheit, label }: { wert: string; einheit?: string; labe
 export default function StatistikSektion() {
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  const bewegungstypVon = Object.fromEntries(useKraftUebungen().map((u) => [u.id, u.bewegungsTyp]))
 
   if (logs.length === 0) {
     return (
@@ -56,7 +56,7 @@ export default function StatistikSektion() {
   const serie = aktuelleSerie(logs, stichtag)
   const zielTage = profil?.trainingstageProWoche ?? 3
 
-  const saetzeProTyp = saetzeNachBewegungsTyp(logs, BEWEGUNGSTYP_VON, vorWochen(stichtag, 4))
+  const saetzeProTyp = saetzeNachBewegungsTyp(logs, bewegungstypVon, vorWochen(stichtag, 4))
   const maxSaetze = Math.max(1, ...Object.values(saetzeProTyp))
   const hatKraftSaetze = Object.values(saetzeProTyp).some((n) => n > 0)
 

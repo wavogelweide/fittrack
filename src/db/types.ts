@@ -47,6 +47,8 @@ export interface Exercise {
   bewegungsTyp: BewegungsTyp
   antagonistGruppe?: AntagonistGruppe
   illustrationId: string
+  // selbst angelegte Übung (löschbar, im Backup enthalten)
+  eigene?: boolean
 }
 
 export type CardioTypeId = 'laufband' | 'ergometer' | 'crosstrainer'
@@ -143,6 +145,20 @@ export interface UserProfile {
   pausenSek?: number
   // Signaltöne stummschalten (Vibration bleibt aktiv)
   tonAus?: boolean
+  // Montag der Woche, deren Wochenrückblick schon gesehen wurde
+  rueckblickGesehen?: string
+  // Deload-Woche (Montag), deren 1RM-Retest-Hinweis quittiert wurde
+  retestQuittiert?: string
+  // Datum des letzten Backup-Exports (für die Backup-Erinnerung)
+  letztesBackup?: string
+}
+
+// Körperdaten-Verlauf: Gewicht in kg, optional Körperfettanteil in %
+export interface KoerperMessung {
+  id: number
+  datum: string // ISO-Datum
+  gewichtKg: number
+  fettProzent?: number
 }
 
 export interface Goal {

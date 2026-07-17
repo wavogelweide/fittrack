@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import {
   backupDateiname,
@@ -16,7 +17,21 @@ async function ladeInhalt(): Promise<BackupInhalt> {
     workoutLogs: await db.workoutLogs.toArray(),
     userProfile: await db.userProfile.toArray(),
     goals: await db.goals.toArray(),
+    koerperdaten: await db.koerperdaten.toArray(),
+    eigeneUebungen: (await db.exercises.toArray()).filter((u) => u.eigene),
   }
+}
+
+// Backup-Zeitpunkt fürs Erinnerungs-Feature im Profil festhalten
+async function merkeBackupDatum(datum: string) {
+  const profil = await db.userProfile.get(1)
+  await db.userProfile.put({
+    trainingsziel: 'hypertrophie',
+    trainingstageProWoche: 3,
+    ...profil,
+    id: 1,
+    letztesBackup: datum,
+  })
 }
 
 function formatiereBytes(bytes: number): string {
@@ -25,6 +40,7 @@ function formatiereBytes(bytes: number): string {
 }
 
 export default function Datensicherung() {
+  const profil = useLiveQuery(() => db.userProfile.get(1), [])
   const dateiInput = useRef<HTMLInputElement>(null)
   const [meldung, setMeldung] = useState<{ text: string; fehler: boolean } | null>(null)
   const [persistent, setPersistent] = useState<boolean | null>(null)
@@ -50,6 +66,7 @@ export default function Datensicherung() {
     if (navigator.canShare?.({ files: [datei] })) {
       try {
         await navigator.share({ files: [datei], title: 'FitTrack-Backup' })
+        await merkeBackupDatum(datum)
         setMeldung({ text: `Backup geteilt (${zaehleBackup(backup)}).`, fehler: false })
         return
       } catch {
@@ -63,6 +80,7 @@ export default function Datensicherung() {
     a.download = datei.name
     a.click()
     URL.revokeObjectURL(url)
+    await merkeBackupDatum(datum)
     setMeldung({ text: `Backup heruntergeladen (${zaehleBackup(backup)}).`, fehler: false })
   }
 
@@ -77,20 +95,29 @@ export default function Datensicherung() {
       `Backup vom ${daten.exportiertAm} importieren (${zaehleBackup(daten)})?\n\nVorhandene Trainingsdaten werden ersetzt.`,
     )
     if (!bestaetigt) return
-    await db.transaction('rw', [db.maxWeights, db.workoutLogs, db.userProfile, db.goals], async () => {
-      await Promise.all([
-        db.maxWeights.clear(),
-        db.workoutLogs.clear(),
-        db.userProfile.clear(),
-        db.goals.clear(),
-      ])
-      await Promise.all([
-        db.maxWeights.bulkPut(daten.maxWeights),
-        db.workoutLogs.bulkPut(daten.workoutLogs),
-        db.userProfile.bulkPut(daten.userProfile),
-        db.goals.bulkPut(daten.goals),
-      ])
-    })
+    await db.transaction(
+      'rw',
+      [db.maxWeights, db.workoutLogs, db.userProfile, db.goals, db.koerperdaten, db.exercises],
+      async () => {
+        const alteEigene = (await db.exercises.toArray()).filter((u) => u.eigene).map((u) => u.id)
+        await Promise.all([
+          db.maxWeights.clear(),
+          db.workoutLogs.clear(),
+          db.userProfile.clear(),
+          db.goals.clear(),
+          db.koerperdaten.clear(),
+          db.exercises.bulkDelete(alteEigene),
+        ])
+        await Promise.all([
+          db.maxWeights.bulkPut(daten.maxWeights),
+          db.workoutLogs.bulkPut(daten.workoutLogs),
+          db.userProfile.bulkPut(daten.userProfile),
+          db.goals.bulkPut(daten.goals),
+          db.koerperdaten.bulkPut(daten.koerperdaten),
+          db.exercises.bulkPut(daten.eigeneUebungen),
+        ])
+      },
+    )
     setMeldung({ text: `Backup vom ${daten.exportiertAm} importiert (${zaehleBackup(daten)}).`, fehler: false })
   }
 
@@ -106,6 +133,12 @@ export default function Datensicherung() {
       <p className="mt-2 text-sm leading-relaxed text-txt3">
         Deine Daten liegen nur auf diesem Gerät. iOS kann den Speicher bei Platzmangel leeren –
         sichere deshalb regelmäßig ein Backup.
+      </p>
+      <p className="mt-1 text-xs text-muted">
+        Letztes Backup:{' '}
+        {profil?.letztesBackup
+          ? `${profil.letztesBackup.slice(8, 10)}.${profil.letztesBackup.slice(5, 7)}.${profil.letztesBackup.slice(0, 4)}`
+          : 'noch keins'}
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-3">

@@ -66,3 +66,18 @@ export function deloadGewicht(gewichtKg: number | null): number | null {
 export function deloadSaetze(saetze: number): number {
   return Math.max(1, Math.round(saetze * DELOAD_SATZ_FAKTOR))
 }
+
+// 1RM-Retest-Empfehlung: die Woche direkt nach einer Deload-Woche ist der
+// klassische Zeitpunkt, die Maximalgewichte neu zu testen – erholt, aber
+// ohne Trainingsrückstand. Gilt nur für diese eine Woche und lässt sich
+// je Deload-Woche einmal quittieren.
+export function retestEmpfohlen(
+  deloadWoche: string | undefined,
+  heute: string,
+  quittiert: string | undefined,
+): boolean {
+  if (!deloadWoche || quittiert === deloadWoche) return false
+  const nachDeload = new Date(`${deloadWoche}T12:00:00`)
+  nachDeload.setTime(nachDeload.getTime() + 7 * MS_PRO_TAG)
+  return montagDerWoche(heute) === iso(nachDeload)
+}

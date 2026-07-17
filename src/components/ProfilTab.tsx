@@ -8,6 +8,7 @@ import { PAUSEN_SEK } from '../logic/progression'
 import { standardWochentage, WOCHENTAG_KURZ } from '../logic/trainingstage'
 import { formatiereSekunden } from '../logic/workout'
 import Datensicherung from './Datensicherung'
+import KoerperdatenVerlauf from './KoerperdatenVerlauf'
 import { gespeicherteWahl, setzeTheme, type ThemeWahl } from './theme'
 
 const THEME_OPTIONEN: { id: ThemeWahl; label: string }[] = [
@@ -122,6 +123,8 @@ export default function ProfilTab() {
           onChange={(maxPuls) => speichere({ maxPuls })}
         />
       </section>
+
+      <KoerperdatenVerlauf />
 
       <section className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">

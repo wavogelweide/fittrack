@@ -5,6 +5,7 @@ import {
   deloadEmpfehlung,
   deloadGewicht,
   deloadSaetze,
+  retestEmpfohlen,
   trainingswochenSeitDeload,
 } from './deload'
 
@@ -83,5 +84,20 @@ describe('deloadGewicht / deloadSaetze', () => {
     expect(deloadSaetze(3)).toBe(2)
     expect(deloadSaetze(4)).toBe(2)
     expect(deloadSaetze(2)).toBe(1)
+  })
+})
+
+describe('retestEmpfohlen', () => {
+  // Deload-Woche: Montag 06.07.2026 → Retest-Fenster ist die Woche ab 13.07.
+  it('empfiehlt den 1RM-Retest genau in der Woche nach dem Deload', () => {
+    expect(retestEmpfohlen('2026-07-06', '2026-07-15', undefined)).toBe(true)
+    expect(retestEmpfohlen('2026-07-06', '2026-07-08', undefined)).toBe(false) // noch im Deload
+    expect(retestEmpfohlen('2026-07-06', '2026-07-22', undefined)).toBe(false) // Fenster vorbei
+    expect(retestEmpfohlen(undefined, '2026-07-15', undefined)).toBe(false)
+  })
+
+  it('bleibt nach dem Quittieren still', () => {
+    expect(retestEmpfohlen('2026-07-06', '2026-07-15', '2026-07-06')).toBe(false)
+    expect(retestEmpfohlen('2026-07-06', '2026-07-15', '2026-06-01')).toBe(true)
   })
 })

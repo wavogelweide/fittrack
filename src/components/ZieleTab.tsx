@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { db } from '../db/db'
-import { CARDIO_GERAETE, KRAFT_UEBUNGEN } from '../db/seed'
+import { CARDIO_GERAETE } from '../db/seed'
 import type { Goal } from '../db/types'
+import { useKraftUebungen } from './useKraftUebungen'
 import {
   berechneZielFortschritt,
   bewerteAmbition,
@@ -12,15 +13,17 @@ import {
   type AmbitionsBewertung,
 } from '../logic/ziele'
 
-const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const CARDIO_NAME = Object.fromEntries(CARDIO_GERAETE.map((g) => [g.id, g.name]))
 
 const heute = () => new Date().toISOString().slice(0, 10)
 const einheitFormat = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 })
 
-function referenzName(ziel: Pick<Goal, 'typ' | 'referenz'>): string {
+function referenzName(
+  ziel: Pick<Goal, 'typ' | 'referenz'>,
+  kraftName: Record<string, string>,
+): string {
   return ziel.typ === 'kraft_gewicht'
-    ? (KRAFT_NAME[ziel.referenz] ?? ziel.referenz)
+    ? (kraftName[ziel.referenz] ?? ziel.referenz)
     : (CARDIO_NAME[ziel.referenz] ?? ziel.referenz)
 }
 
@@ -77,10 +80,11 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
   const [zieldatum, setZieldatum] = useState('')
   const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
+  const kraftUebungen = useKraftUebungen()
 
   const referenzen =
     typ === 'kraft_gewicht'
-      ? [...KRAFT_UEBUNGEN].sort((a, b) => a.name.localeCompare(b.name, 'de'))
+      ? [...kraftUebungen].sort((a, b) => a.name.localeCompare(b.name, 'de'))
       : CARDIO_GERAETE
 
   const wert = parseFloat(zielwert.replace(',', '.'))
@@ -226,6 +230,7 @@ function NeuesZiel({ onFertig }: { onFertig: () => void }) {
 function ZielKarte({ ziel }: { ziel: Goal }) {
   const maxWeights = useLiveQuery(() => db.maxWeights.toArray(), []) ?? []
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
+  const kraftName = Object.fromEntries(useKraftUebungen().map((u) => [u.id, u.name]))
   const f = berechneZielFortschritt(ziel, maxWeights, logs)
   const farbe = TYP_FARBE[ziel.typ]
   const tage = tageBisZiel(ziel.zieldatum, heute())
@@ -245,7 +250,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
   }))
 
   const loeschen = () => {
-    if (window.confirm(`Ziel „${referenzName(ziel)}" löschen?`)) void db.goals.delete(ziel.id)
+    if (window.confirm(`Ziel „${referenzName(ziel, kraftName)}" löschen?`)) void db.goals.delete(ziel.id)
   }
 
   return (
@@ -257,7 +262,7 @@ function ZielKarte({ ziel }: { ziel: Goal }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold">
-            {referenzName(ziel)}
+            {referenzName(ziel, kraftName)}
             {zielFormulierung(ziel) && (
               <span className="ml-2 font-normal text-txt3">{zielFormulierung(ziel)}</span>
             )}

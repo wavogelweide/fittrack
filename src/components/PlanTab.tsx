@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { db } from '../db/db'
-import { DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
+import { DEHN_UEBUNGEN } from '../db/seed'
+import type { Exercise, UserProfile } from '../db/types'
+import { backupErinnerung } from '../logic/backup'
+import { retestEmpfohlen } from '../logic/deload'
 import { montagDerWoche } from '../logic/statistik'
 import { alternativeUebungen, setzeAnpassung } from '../logic/planAnpassung'
+import { rueckblickFaellig, wochenRueckblick } from '../logic/rueckblick'
 import {
   heutigerPlanTag,
   standardWochentage,
@@ -10,12 +14,11 @@ import {
 } from '../logic/trainingstage'
 import type { KraftVorschlag, TrainingsTag } from '../logic/vorschlag'
 import ExerciseIllustration from './ExerciseIllustration'
+import { useKraftUebungen } from './useKraftUebungen'
 import { useWochenplan } from './useWochenplan'
 import { useZurueckGeste } from './zurueckGeste'
 
-const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const DEHN_INFO = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u]))
-const KRAFT_ILLU = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.illustrationId]))
 
 const heute = () => new Date().toISOString().slice(0, 10)
 
@@ -49,24 +52,27 @@ async function speichereAnpassung(exerciseId: string, wert: string | null | unde
 
 function KraftZeile({
   vorschlag,
+  info,
   onMenu,
 }: {
   vorschlag: KraftVorschlag
+  info: Record<string, Exercise>
   onMenu: (v: KraftVorschlag) => void
 }) {
   const prio = PRIO[vorschlag.prioritaet]
   const progression = vorschlag.progression && PROGRESSION_CHIP[vorschlag.progression]
   const ersetzt = vorschlag.basisId && vorschlag.basisId !== vorschlag.exerciseId
+  const uebung = info[vorschlag.exerciseId]
   return (
     <li className="flex items-center gap-3 border-t border-hairline py-2.5 first:border-t-0">
       <ExerciseIllustration
         klein
-        illustrationId={KRAFT_ILLU[vorschlag.exerciseId] ?? vorschlag.exerciseId}
-        name={KRAFT_NAME[vorschlag.exerciseId] ?? vorschlag.exerciseId}
+        illustrationId={uebung?.illustrationId ?? vorschlag.exerciseId}
+        name={uebung?.name ?? vorschlag.exerciseId}
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-medium">{KRAFT_NAME[vorschlag.exerciseId] ?? vorschlag.exerciseId}</p>
+          <p className="font-medium">{uebung?.name ?? vorschlag.exerciseId}</p>
           {prio && (
             <span className={`rounded-full border px-2 py-0.5 text-[11px] ${prio.klasse}`}>
               {prio.label}
@@ -119,14 +125,17 @@ function KraftZeile({
 // ausblenden oder auf Standard zurücksetzen
 function AnpassungsMenue({
   vorschlag,
+  alle,
   onClose,
 }: {
   vorschlag: KraftVorschlag
+  alle: Exercise[]
   onClose: () => void
 }) {
   const basisId = vorschlag.basisId!
   const ersetzt = basisId !== vorschlag.exerciseId
-  const alternativen = alternativeUebungen(basisId, KRAFT_UEBUNGEN)
+  const alternativen = alternativeUebungen(basisId, alle)
+  const basisName = alle.find((u) => u.id === basisId)?.name ?? basisId
   const geste = useZurueckGeste(onClose)
 
   const setze = async (wert: string | null | undefined) => {
@@ -141,7 +150,7 @@ function AnpassungsMenue({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line-strong" />
-        <p className="text-sm font-semibold">{KRAFT_NAME[basisId] ?? basisId} anpassen</p>
+        <p className="text-sm font-semibold">{basisName} anpassen</p>
         <p className="mt-0.5 text-xs text-muted">
           Ersetze die Übung durch eine Alternative für dieselbe Muskelgruppe oder blende sie aus.
         </p>
@@ -152,7 +161,7 @@ function AnpassungsMenue({
               onClick={() => void setze(undefined)}
               className="flex h-12 w-full items-center rounded-xl border border-line bg-elev px-4 text-left text-sm text-neon-cyan active:bg-elev2"
             >
-              ↺ Standardübung ({KRAFT_NAME[basisId]}) wiederherstellen
+              ↺ Standardübung ({basisName}) wiederherstellen
             </button>
           )}
           {alternativen.map((alt) => (
@@ -186,12 +195,14 @@ function TagKarte({
   tag,
   wochentag,
   istHeute,
+  info,
   onStart,
   onMenu,
 }: {
   tag: TrainingsTag
   wochentag: string | null
   istHeute: boolean
+  info: Record<string, Exercise>
   onStart: (tag: TrainingsTag) => void
   onMenu: (v: KraftVorschlag) => void
 }) {
@@ -228,7 +239,12 @@ function TagKarte({
       <h3 className="mt-3 text-xs font-semibold uppercase tracking-widest text-muted">Kraft</h3>
       <ul className="mt-1">
         {tag.kraft.map((k) => (
-          <KraftZeile key={`${k.basisId ?? ''}-${k.exerciseId}`} vorschlag={k} onMenu={onMenu} />
+          <KraftZeile
+            key={`${k.basisId ?? ''}-${k.exerciseId}`}
+            vorschlag={k}
+            info={info}
+            onMenu={onMenu}
+          />
         ))}
       </ul>
 
@@ -270,15 +286,43 @@ async function setzeDeloadWoche(wert: string | undefined) {
   })
 }
 
+const zahl = (n: number, stellen = 0) =>
+  n.toLocaleString('de-DE', { maximumFractionDigits: stellen })
+
+// Profilfeld speichern (mit Defaults, falls noch kein Profil existiert)
+async function speichereProfilFeld(patch: Partial<UserProfile>) {
+  const profil = await db.userProfile.get(1)
+  await db.userProfile.put({
+    trainingsziel: 'hypertrophie',
+    trainingstageProWoche: 3,
+    ...profil,
+    ...patch,
+    id: 1,
+  })
+}
+
 export default function PlanTab({
   onStart,
   onFreiesWorkout,
+  onOeffneProfil,
 }: {
   onStart: (tag: TrainingsTag) => void
   onFreiesWorkout: () => void
+  onOeffneProfil: () => void
 }) {
-  const { plan, profil, deload } = useWochenplan()
+  const { plan, profil, deload, logs, maxWeights } = useWochenplan()
   const [menue, setMenue] = useState<KraftVorschlag | null>(null)
+  const kraftUebungen = useKraftUebungen()
+  const kraftInfo = Object.fromEntries(kraftUebungen.map((u) => [u.id, u]))
+
+  // Wochenrückblick beim ersten Öffnen in einer neuen Woche
+  const rueckblick =
+    rueckblickFaellig(profil?.rueckblickGesehen, heute()) &&
+    wochenRueckblick(logs, maxWeights, heute())
+  // 1RM-Retest in der Woche nach dem Deload
+  const retest = retestEmpfohlen(profil?.deloadWoche, heute(), profil?.retestQuittiert)
+  // Backup-Erinnerung (nur wenn kein Rückblick die Bühne braucht)
+  const backup = backupErinnerung(profil?.letztesBackup, heute(), logs.length)
 
   // Wochentage der Trainingstage (aus dem Profil, sonst gleichmäßig verteilt);
   // der heutige Trainingstag steht zuoberst und ist hervorgehoben
@@ -293,6 +337,75 @@ export default function PlanTab({
 
   return (
     <div className="space-y-4">
+      {rueckblick && (
+        <div className="rounded-2xl border border-neon-violet/40 bg-neon-violet/5 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-neon-violet">
+              Dein Wochenrückblick
+            </p>
+            <button
+              onClick={() => void speichereProfilFeld({ rueckblickGesehen: montagDerWoche(heute()) })}
+              aria-label="Rückblick schließen"
+              className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-txt3 active:bg-elev2"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="text-2xl font-bold text-txt">{rueckblick.einheiten}</p>
+              <p className="text-[11px] text-muted">Einheiten</p>
+            </div>
+            <div>
+              <p className="truncate text-2xl font-bold text-txt">{zahl(rueckblick.volumenKg)}</p>
+              <p className="text-[11px] text-muted">kg Volumen</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-warn">{rueckblick.rekorde}</p>
+              <p className="text-[11px] text-muted">{rueckblick.rekorde === 1 ? 'Rekord' : 'Rekorde'}</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-neon-lime">{rueckblick.serieWochen}</p>
+              <p className="text-[11px] text-muted">Wo. Serie</p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Letzte Woche{rueckblick.cardioMin > 0 ? ` · ${rueckblick.cardioMin} Min. Cardio` : ''} –
+            weiter so!
+          </p>
+        </div>
+      )}
+
+      {retest && (
+        <div className="rounded-2xl border border-neon-lime/40 bg-neon-lime/5 p-4">
+          <p className="text-sm font-semibold text-neon-lime">Maximalgewichte neu testen</p>
+          <p className="mt-1 text-sm leading-relaxed text-txt2">
+            Deine Deload-Woche ist vorbei – der ideale Zeitpunkt für einen 1RM-Retest. Trage
+            neue Maximalgewichte im Katalog ein, damit Plan und Ziele auf frischen Daten stehen.
+          </p>
+          <button
+            onClick={() => void speichereProfilFeld({ retestQuittiert: profil?.deloadWoche })}
+            className="mt-3 h-11 w-full rounded-xl border border-line bg-elev text-sm text-txt3 active:bg-elev2"
+          >
+            Verstanden
+          </button>
+        </div>
+      )}
+
+      {!rueckblick && backup.faellig && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-warn/30 bg-warn/10 p-4">
+          <p className="min-w-0 text-sm leading-relaxed text-warn">{backup.grund}</p>
+          <button
+            onClick={onOeffneProfil}
+            className="h-10 shrink-0 rounded-lg border border-warn/40 bg-warn/10 px-3 text-sm font-semibold text-warn active:bg-warn/20"
+          >
+            Backup
+          </button>
+        </div>
+      )}
+
       {deload.faellig && (
         <div className="rounded-2xl border border-neon-cyan/40 bg-neon-cyan/5 p-4">
           <p className="text-sm font-semibold text-neon-cyan">Deload-Woche empfohlen</p>
@@ -343,6 +456,7 @@ export default function PlanTab({
           tag={t}
           wochentag={wochentagFuerPlanTag(wochentage, t.nr)}
           istHeute={t.nr === heuteNr}
+          info={kraftInfo}
           onStart={onStart}
           onMenu={setMenue}
         />
@@ -361,7 +475,9 @@ export default function PlanTab({
         Schätzwerte und ersetzen keine physiotherapeutische oder ärztliche Beratung.
       </p>
 
-      {menue && <AnpassungsMenue vorschlag={menue} onClose={() => setMenue(null)} />}
+      {menue && (
+        <AnpassungsMenue vorschlag={menue} alle={kraftUebungen} onClose={() => setMenue(null)} />
+      )}
     </div>
   )
 }
