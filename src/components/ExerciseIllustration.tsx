@@ -17,6 +17,7 @@ export default function ExerciseIllustration({
 }) {
   const url = BILDER[`../assets/illustrations/${illustrationId}.svg`]
   if (klein) {
+    // Fallback für Übungen ohne SVG (z. B. eigene Übungen): Initial-Kachel
     return url ? (
       <img
         src={url}
@@ -25,7 +26,14 @@ export default function ExerciseIllustration({
         className="h-16 w-16 shrink-0 rounded-xl bg-illu"
         draggable={false}
       />
-    ) : null
+    ) : (
+      <div
+        aria-hidden="true"
+        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-illu text-2xl font-bold text-txt3"
+      >
+        {name.trim().charAt(0).toUpperCase() || '?'}
+      </div>
+    )
   }
   if (!url) {
     return (

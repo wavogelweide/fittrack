@@ -2,12 +2,14 @@
 // Entwürfe aus dem Wochenplan vorbefüllen, Intervall-Phasen berechnen,
 // erledigte Einträge in ein WorkoutLog überführen.
 import type { CardioTypeId, WorkoutEintrag, WorkoutLog } from '../db/types'
+import { aufwaermSaetze } from './aufwaermen'
 import type { TrainingsTag } from './vorschlag'
 
 export interface SatzEntwurf {
   gewichtKg: number | null // null = noch kein Arbeitsgewicht bekannt
   wdh: number
   erledigt: boolean
+  aufwaermen?: boolean // leichter Aufwärmsatz vor dem Arbeitsgewicht
 }
 
 export interface KraftEntwurf {
@@ -42,8 +44,18 @@ export function mittlereWdh(wdh: [number, number]): number {
   return Math.round((wdh[0] + wdh[1]) / 2)
 }
 
-// Entwurf aus einem Wochenplan-Tag: Sätze mit Arbeitsgewicht und mittlerer
-// Wiederholungszahl vorbefüllen, Dehnübungen mit ihrer Haltedauer
+// Aufwärmsätze als vorangestellte Satz-Entwürfe (leer, wenn Gewicht fehlt/leicht)
+export function aufwaermEntwuerfe(arbeitsgewichtKg: number | null): SatzEntwurf[] {
+  return aufwaermSaetze(arbeitsgewichtKg).map((s) => ({
+    gewichtKg: s.gewichtKg,
+    wdh: s.wdh,
+    erledigt: false,
+    aufwaermen: true,
+  }))
+}
+
+// Entwurf aus einem Wochenplan-Tag: Aufwärmsätze plus Sätze mit Arbeitsgewicht
+// und mittlerer Wiederholungszahl vorbefüllen, Dehnübungen mit ihrer Haltedauer
 export function entwurfAusTag(
   tag: TrainingsTag,
   halteDauerSek: Record<string, number>,
@@ -51,11 +63,14 @@ export function entwurfAusTag(
   return {
     kraft: tag.kraft.map((k) => ({
       exerciseId: k.exerciseId,
-      saetze: Array.from({ length: k.saetze }, () => ({
-        gewichtKg: k.gewichtKg,
-        wdh: mittlereWdh(k.wdh),
-        erledigt: false,
-      })),
+      saetze: [
+        ...aufwaermEntwuerfe(k.gewichtKg),
+        ...Array.from({ length: k.saetze }, () => ({
+          gewichtKg: k.gewichtKg,
+          wdh: mittlereWdh(k.wdh),
+          erledigt: false,
+        })),
+      ],
     })),
     cardio: { cardioType: 'laufband', methode: tag.cardio.methode },
     dehnen: tag.dehnen.map((d) => ({
@@ -74,6 +89,7 @@ export function leererEntwurf(): WorkoutEntwurf {
 export function entwurfZuLog(
   entwurf: WorkoutEntwurf,
   datum: string,
+  dauerMin?: number,
 ): Omit<WorkoutLog, 'id'> | null {
   const eintraege: WorkoutEintrag[] = []
   for (const k of entwurf.kraft) {
@@ -102,7 +118,35 @@ export function entwurfZuLog(
     : eintraege.some((e) => e.art === 'cardio')
       ? 'cardio'
       : 'dehnen'
-  return { datum, typ, eintraege }
+  return { datum, typ, eintraege, ...(dauerMin && dauerMin > 0 ? { dauerMin } : {}) }
+}
+
+// --- Anzeige-Helfer für "Zuletzt: …" ----------------------------------------
+
+// Sätze kompakt formatieren: "3×12 @ 40 kg" bzw. "40 kg: 12/10/8 Wdh."
+export function formatiereSaetzeKompakt(saetze: { gewichtKg: number; wdh: number }[]): string {
+  if (saetze.length === 0) return ''
+  const kg = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 1 })
+  const gewichte = new Set(saetze.map((s) => s.gewichtKg))
+  const wdhs = new Set(saetze.map((s) => s.wdh))
+  if (gewichte.size === 1 && wdhs.size === 1) {
+    return `${saetze.length}×${saetze[0].wdh} @ ${kg(saetze[0].gewichtKg)} kg`
+  }
+  if (gewichte.size === 1) {
+    return `${kg(saetze[0].gewichtKg)} kg: ${saetze.map((s) => s.wdh).join('/')} Wdh.`
+  }
+  return saetze.map((s) => `${kg(s.gewichtKg)}×${s.wdh}`).join(' · ')
+}
+
+// "heute", "gestern", "vor X Tagen"
+export function tageSeitText(datum: string, heute: string): string {
+  const tage = Math.round(
+    (new Date(`${heute}T12:00:00`).getTime() - new Date(`${datum}T12:00:00`).getTime()) /
+      (24 * 60 * 60 * 1000),
+  )
+  if (tage <= 0) return 'heute'
+  if (tage === 1) return 'gestern'
+  return `vor ${tage} Tagen`
 }
 
 // --- 60/120-Intervalle (Abschnitt 5.1b): 60 s Belastung / 120 s Erholung ----

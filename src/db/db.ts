@@ -1,5 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Exercise, Goal, MaxWeight, StretchExercise, UserProfile, WorkoutLog } from './types'
+import type {
+  Exercise,
+  Goal,
+  KoerperMessung,
+  MaxWeight,
+  StretchExercise,
+  UserProfile,
+  WorkoutLog,
+} from './types'
 import { DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from './seed'
 
 class FitTrackDB extends Dexie {
@@ -9,6 +17,7 @@ class FitTrackDB extends Dexie {
   workoutLogs!: EntityTable<WorkoutLog, 'id'>
   userProfile!: EntityTable<UserProfile, 'id'>
   goals!: EntityTable<Goal, 'id'>
+  koerperdaten!: EntityTable<KoerperMessung, 'id'>
 
   constructor() {
     super('fittrack')
@@ -19,6 +28,10 @@ class FitTrackDB extends Dexie {
       workoutLogs: '++id, datum, typ',
       userProfile: '++id',
       goals: '++id, typ, status',
+    })
+    // v2: Körperdaten-Verlauf (Gewicht/Körperfettanteil)
+    this.version(2).stores({
+      koerperdaten: '++id, datum',
     })
     this.on('populate', (tx) => {
       void tx.table('exercises').bulkAdd(KRAFT_UEBUNGEN)

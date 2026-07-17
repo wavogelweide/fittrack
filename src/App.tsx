@@ -9,6 +9,8 @@ import TabBar, { type Tab } from './components/TabBar'
 import SuchFeld from './components/SuchFeld'
 import DetailAnsicht, { type Auswahl } from './components/DetailAnsicht'
 import { CardioListe, DehnListe, KraftListe } from './components/KatalogListen'
+import EigeneUebungForm from './components/EigeneUebungForm'
+import Onboarding from './components/Onboarding'
 import ProfilTab from './components/ProfilTab'
 import AnalyseTab from './components/AnalyseTab'
 import PlanTab from './components/PlanTab'
@@ -41,9 +43,12 @@ function App() {
   const [suche, setSuche] = useState('')
   const [auswahl, setAuswahl] = useState<Auswahl | null>(null)
   const [workout, setWorkout] = useState<{ titel: string; entwurf: WorkoutEntwurf } | null>(null)
+  const [uebungForm, setUebungForm] = useState(false)
 
   const kraft = useLiveQuery(() => db.exercises.orderBy('name').toArray(), []) ?? []
   const dehnen = useLiveQuery(() => db.stretches.orderBy('name').toArray(), []) ?? []
+  // null = noch kein Profil (Erststart → Onboarding), undefined = lädt noch
+  const profilStatus = useLiveQuery(async () => (await db.userProfile.get(1)) ?? null, [])
 
   const wechsleTab = (t: Tab) => {
     setTab(t)
@@ -90,10 +95,18 @@ function App() {
 
       <main className="mt-3">
         {tab === 'katalog' && katalogArt === 'kraft' && (
-          <KraftListe
-            uebungen={filtereKraft(kraft, suche)}
-            onAuswahl={(u) => setAuswahl({ typ: 'kraft', uebung: u })}
-          />
+          <>
+            <KraftListe
+              uebungen={filtereKraft(kraft, suche)}
+              onAuswahl={(u) => setAuswahl({ typ: 'kraft', uebung: u })}
+            />
+            <button
+              onClick={() => setUebungForm(true)}
+              className="mt-3 h-12 w-full rounded-xl border border-dashed border-line-strong text-sm text-txt3 active:bg-elev"
+            >
+              + Eigene Übung anlegen
+            </button>
+          </>
         )}
         {tab === 'katalog' && katalogArt === 'cardio' && (
           <CardioListe
@@ -107,7 +120,13 @@ function App() {
             onAuswahl={(u) => setAuswahl({ typ: 'dehnen', uebung: u })}
           />
         )}
-        {tab === 'plan' && <PlanTab onStart={starteTag} onFreiesWorkout={starteFreiesWorkout} />}
+        {tab === 'plan' && (
+          <PlanTab
+            onStart={starteTag}
+            onFreiesWorkout={starteFreiesWorkout}
+            onOeffneProfil={() => wechsleTab('profil')}
+          />
+        )}
         {tab === 'workout' && <WorkoutTab />}
         {tab === 'ziele' && <ZieleTab />}
         {tab === 'analyse' && <AnalyseTab />}
@@ -117,6 +136,8 @@ function App() {
       <TabBar tab={tab} onChange={wechsleTab} />
 
       {auswahl && <DetailAnsicht auswahl={auswahl} onClose={() => setAuswahl(null)} />}
+      {uebungForm && <EigeneUebungForm onClose={() => setUebungForm(false)} />}
+      {profilStatus === null && <Onboarding />}
       {workout && (
         <WorkoutModus
           titel={workout.titel}

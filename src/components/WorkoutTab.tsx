@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { CARDIO_GERAETE, DEHN_UEBUNGEN, KRAFT_UEBUNGEN } from '../db/seed'
+import { CARDIO_GERAETE, DEHN_UEBUNGEN } from '../db/seed'
 import type { WorkoutEintrag, WorkoutLog } from '../db/types'
+import { monatsGitter, monatsName, typenProTag, verschiebeMonat } from '../logic/kalender'
 import { fasseWorkoutZusammen } from '../logic/workout'
+import { useKraftUebungen } from './useKraftUebungen'
 import { useZurueckGeste } from './zurueckGeste'
 
-const KRAFT_NAME = Object.fromEntries(KRAFT_UEBUNGEN.map((u) => [u.id, u.name]))
 const DEHN_NAME = Object.fromEntries(DEHN_UEBUNGEN.map((u) => [u.id, u.name]))
 const CARDIO_NAME = Object.fromEntries(CARDIO_GERAETE.map((g) => [g.id, g.name]))
 
@@ -28,11 +29,17 @@ function formatDatum(iso: string): string {
   })
 }
 
-function EintragDetail({ eintrag }: { eintrag: WorkoutEintrag }) {
+function EintragDetail({
+  eintrag,
+  kraftName,
+}: {
+  eintrag: WorkoutEintrag
+  kraftName: Record<string, string>
+}) {
   if (eintrag.art === 'kraft') {
     return (
       <div className="border-t border-hairline py-2.5 first:border-t-0">
-        <p className="font-medium">{KRAFT_NAME[eintrag.exerciseId] ?? eintrag.exerciseId}</p>
+        <p className="font-medium">{kraftName[eintrag.exerciseId] ?? eintrag.exerciseId}</p>
         <p className="mt-0.5 text-sm text-txt3">
           {eintrag.saetze.map((s, i) => (
             <span key={i}>
@@ -67,6 +74,7 @@ function EintragDetail({ eintrag }: { eintrag: WorkoutEintrag }) {
 
 function HistorieDetail({ log, onClose }: { log: WorkoutLog; onClose: () => void }) {
   const geste = useZurueckGeste(onClose)
+  const kraftName = Object.fromEntries(useKraftUebungen().map((u) => [u.id, u.name]))
   const badge = TYP_BADGE[log.typ]
   const loeschen = () => {
     if (window.confirm('Dieses Workout aus der Historie löschen?')) {
@@ -93,9 +101,10 @@ function HistorieDetail({ log, onClose }: { log: WorkoutLog; onClose: () => void
             </span>
           </div>
           <h2 className="text-2xl font-bold tracking-tight">{formatDatum(log.datum)}</h2>
+          {log.dauerMin && <p className="mt-0.5 text-sm text-muted">Dauer: {log.dauerMin} Min.</p>}
           <div className="mt-4">
             {log.eintraege.map((e, i) => (
-              <EintragDetail key={i} eintrag={e} />
+              <EintragDetail key={i} eintrag={e} kraftName={kraftName} />
             ))}
           </div>
         </div>
@@ -111,6 +120,87 @@ function HistorieDetail({ log, onClose }: { log: WorkoutLog; onClose: () => void
   )
 }
 
+const PUNKT_FARBE: Record<WorkoutLog['typ'], string> = {
+  kraft: 'bg-neon-lime',
+  cardio: 'bg-neon-cyan',
+  dehnen: 'bg-neon-violet',
+}
+
+const WOCHENTAG_KOPF = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+
+// Monatskalender mit farbcodierten Trainingstagen (Kraft/Cardio/Dehnen)
+function KalenderSektion({ logs }: { logs: WorkoutLog[] }) {
+  const heute = new Date().toISOString().slice(0, 10)
+  const [ansicht, setAnsicht] = useState({
+    jahr: Number(heute.slice(0, 4)),
+    monat: Number(heute.slice(5, 7)),
+  })
+  const typen = typenProTag(logs)
+  const wochen = monatsGitter(ansicht.jahr, ansicht.monat)
+
+  return (
+    <section className="rounded-2xl border border-line bg-elev p-4 backdrop-blur-md">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setAnsicht(verschiebeMonat(ansicht.jahr, ansicht.monat, -1))}
+          aria-label="Voriger Monat"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-txt2 active:bg-elev2"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <p className="font-semibold">{monatsName(ansicht.jahr, ansicht.monat)}</p>
+        <button
+          onClick={() => setAnsicht(verschiebeMonat(ansicht.jahr, ansicht.monat, 1))}
+          aria-label="Nächster Monat"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-txt2 active:bg-elev2"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="mt-1 grid grid-cols-7 text-center text-[11px] font-semibold uppercase text-muted">
+        {WOCHENTAG_KOPF.map((t) => (
+          <span key={t} className="py-1">
+            {t}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {wochen.flat().map((zelle) => (
+          <div
+            key={zelle.datum}
+            className={`flex h-11 flex-col items-center justify-center rounded-xl ${
+              zelle.datum === heute ? 'border border-neon-lime/50 bg-neon-lime/5' : ''
+            }`}
+          >
+            <span
+              className={`text-sm tabular-nums ${
+                zelle.imMonat ? 'text-txt' : 'text-faint'
+              } ${zelle.datum === heute ? 'font-bold' : ''}`}
+            >
+              {zelle.tag}
+            </span>
+            <span className="mt-0.5 flex h-1.5 gap-0.5">
+              {(typen[zelle.datum] ?? []).map((t) => (
+                <span key={t} className={`h-1.5 w-1.5 rounded-full ${PUNKT_FARBE[t]}`} />
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-muted">
+        <span className="text-neon-lime">●</span> Kraft ·{' '}
+        <span className="text-neon-cyan">●</span> Cardio ·{' '}
+        <span className="text-neon-violet">●</span> Dehnen
+      </p>
+    </section>
+  )
+}
+
 export default function WorkoutTab() {
   const logs =
     useLiveQuery(() => db.workoutLogs.orderBy('datum').reverse().toArray(), []) ?? []
@@ -118,6 +208,8 @@ export default function WorkoutTab() {
 
   return (
     <div className="space-y-6">
+      <KalenderSektion logs={logs} />
+
       <section>
         {logs.length === 0 ? (
           <p className="mt-3 px-1 text-sm leading-relaxed text-muted">
@@ -130,6 +222,7 @@ export default function WorkoutTab() {
               const z = fasseWorkoutZusammen(log)
               const badge = TYP_BADGE[log.typ]
               const teile = [
+                log.dauerMin && `${log.dauerMin} Min.`,
                 z.kraftUebungen > 0 &&
                   `${z.saetze} ${z.saetze === 1 ? 'Satz' : 'Sätze'} · ${kg(z.volumenKg)} kg Volumen`,
                 z.cardioMin > 0 && `${z.cardioMin} Min. Cardio`,

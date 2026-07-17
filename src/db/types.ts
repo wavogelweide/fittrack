@@ -47,6 +47,8 @@ export interface Exercise {
   bewegungsTyp: BewegungsTyp
   antagonistGruppe?: AntagonistGruppe
   illustrationId: string
+  // selbst angelegte Übung (löschbar, im Backup enthalten)
+  eigene?: boolean
 }
 
 export type CardioTypeId = 'laufband' | 'ergometer' | 'crosstrainer'
@@ -105,6 +107,7 @@ export interface WorkoutLog {
   id: number
   datum: string // ISO-Datum
   typ: 'kraft' | 'cardio' | 'dehnen'
+  dauerMin?: number // Gesamtdauer der Einheit (Start bis Abschluss)
   eintraege: WorkoutEintrag[]
 }
 
@@ -130,6 +133,32 @@ export interface UserProfile {
   trainingsziel: Trainingsziel
   trainingstageProWoche: number
   selbstcheck?: SelbstcheckAntworten & { datum: string }
+  // Montag der letzten/aktuellen Deload-Woche (Entlastungswoche)
+  deloadWoche?: string
+  // Plananpassungen: Basis-exerciseId → Ersatz-exerciseId oder null (ausgeblendet)
+  planAnpassungen?: Record<string, string | null>
+  // Feste Wochentage der Trainingstage (0 = Montag … 6 = Sonntag)
+  trainingsWochentage?: number[]
+  // Persönliche Maschinen-Notizen je Übung (Sitzhöhe, Einstellungen …)
+  uebungsNotizen?: Record<string, string>
+  // Eigene Satzpause in Sekunden (statt des Standards je Trainingsziel)
+  pausenSek?: number
+  // Signaltöne stummschalten (Vibration bleibt aktiv)
+  tonAus?: boolean
+  // Montag der Woche, deren Wochenrückblick schon gesehen wurde
+  rueckblickGesehen?: string
+  // Deload-Woche (Montag), deren 1RM-Retest-Hinweis quittiert wurde
+  retestQuittiert?: string
+  // Datum des letzten Backup-Exports (für die Backup-Erinnerung)
+  letztesBackup?: string
+}
+
+// Körperdaten-Verlauf: Gewicht in kg, optional Körperfettanteil in %
+export interface KoerperMessung {
+  id: number
+  datum: string // ISO-Datum
+  gewichtKg: number
+  fettProzent?: number
 }
 
 export interface Goal {

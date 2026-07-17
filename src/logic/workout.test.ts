@@ -4,11 +4,13 @@ import {
   entwurfAusTag,
   entwurfZuLog,
   fasseWorkoutZusammen,
+  formatiereSaetzeKompakt,
   formatiereSekunden,
   intervallGesamtSek,
   intervallStatus,
   leererEntwurf,
   mittlereWdh,
+  tageSeitText,
   type WorkoutEntwurf,
 } from './workout'
 
@@ -24,10 +26,24 @@ const TAG: TrainingsTag = {
 }
 
 describe('entwurfAusTag', () => {
-  it('befüllt Sätze mit Arbeitsgewicht und mittlerer Wiederholungszahl vor', () => {
+  it('stellt Aufwärmsätze voran und befüllt Arbeitssätze mit Gewicht und mittlerer Wdh.', () => {
     const e = entwurfAusTag(TAG, { kindhaltung: 45 })
-    expect(e.kraft[0].saetze).toHaveLength(3)
-    expect(e.kraft[0].saetze[0]).toEqual({ gewichtKg: 42.5, wdh: 10, erledigt: false })
+    // 42,5 kg → 2 Aufwärmsätze (50 %/75 %) + 3 Arbeitssätze
+    expect(e.kraft[0].saetze).toHaveLength(5)
+    expect(e.kraft[0].saetze[0]).toEqual({
+      gewichtKg: 22.5,
+      wdh: 10,
+      erledigt: false,
+      aufwaermen: true,
+    })
+    expect(e.kraft[0].saetze[1]).toEqual({
+      gewichtKg: 32.5,
+      wdh: 5,
+      erledigt: false,
+      aufwaermen: true,
+    })
+    expect(e.kraft[0].saetze[2]).toEqual({ gewichtKg: 42.5, wdh: 10, erledigt: false })
+    // ohne Arbeitsgewicht keine Aufwärmsätze
     expect(e.kraft[1].saetze).toHaveLength(4)
     expect(e.kraft[1].saetze[0].gewichtKg).toBeNull()
   })
@@ -105,6 +121,52 @@ describe('entwurfZuLog', () => {
       dehnen: [{ stretchId: 'kindhaltung', zielSek: 45, erledigt: true }],
     }
     expect(entwurfZuLog(entwurf, '2026-07-10')?.typ).toBe('dehnen')
+  })
+})
+
+describe('entwurfZuLog – Dauer', () => {
+  it('übernimmt die Workout-Dauer, lässt sie ohne Wert weg', () => {
+    const entwurf: WorkoutEntwurf = {
+      kraft: [],
+      cardio: null,
+      dehnen: [{ stretchId: 'kindhaltung', zielSek: 45, erledigt: true }],
+    }
+    expect(entwurfZuLog(entwurf, '2026-07-12', 52)?.dauerMin).toBe(52)
+    expect(entwurfZuLog(entwurf, '2026-07-12')?.dauerMin).toBeUndefined()
+    expect(entwurfZuLog(entwurf, '2026-07-12', 0)?.dauerMin).toBeUndefined()
+  })
+})
+
+describe('formatiereSaetzeKompakt', () => {
+  it('fasst gleiche Sätze zusammen, listet ungleiche auf', () => {
+    expect(
+      formatiereSaetzeKompakt([
+        { gewichtKg: 40, wdh: 12 },
+        { gewichtKg: 40, wdh: 12 },
+        { gewichtKg: 40, wdh: 12 },
+      ]),
+    ).toBe('3×12 @ 40 kg')
+    expect(
+      formatiereSaetzeKompakt([
+        { gewichtKg: 40, wdh: 12 },
+        { gewichtKg: 40, wdh: 10 },
+      ]),
+    ).toBe('40 kg: 12/10 Wdh.')
+    expect(
+      formatiereSaetzeKompakt([
+        { gewichtKg: 20, wdh: 15 },
+        { gewichtKg: 42.5, wdh: 10 },
+      ]),
+    ).toBe('20×15 · 42,5×10')
+    expect(formatiereSaetzeKompakt([])).toBe('')
+  })
+})
+
+describe('tageSeitText', () => {
+  it('formatiert heute, gestern und vor X Tagen', () => {
+    expect(tageSeitText('2026-07-12', '2026-07-12')).toBe('heute')
+    expect(tageSeitText('2026-07-11', '2026-07-12')).toBe('gestern')
+    expect(tageSeitText('2026-07-08', '2026-07-12')).toBe('vor 4 Tagen')
   })
 })
 

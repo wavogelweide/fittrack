@@ -2,16 +2,21 @@
 // Aus Dysbalance-Flags, Haltungsmustern und 1RM-Werten wird ein Wochenplan generiert.
 import type { Trainingsziel, WorkoutLog } from '../db/types'
 import type { MusterErgebnis, RatioErgebnis } from './analyse'
+import { deloadGewicht, deloadSaetze } from './deload'
 import { ZIEL_KONFIG } from './einRM'
 import { progressionsVorschlag, type ProgressionsVorschlag } from './progression'
 
 export interface KraftVorschlag {
   exerciseId: string
+  // Basis-Übung des Plans (falls über Anpassung ersetzt ≠ exerciseId);
+  // nur gesetzt für Übungen aus dem Basisplan, die angepasst werden dürfen
+  basisId?: string
   saetze: number
   wdh: [number, number]
   gewichtKg: number | null // null = noch kein Maximalgewicht erfasst
   prioritaet: 'hoch' | 'normal' | 'erhaltung'
   progression?: ProgressionsVorschlag['aktion']
+  deload?: boolean
   grund?: string
 }
 
@@ -47,6 +52,9 @@ export interface WochenplanInput {
   trainingstageProWoche: number
   ga1Zone?: { von: number; bis: number } | null
   logs?: WorkoutLog[] // Protokoll für die automatische Progression
+  deload?: boolean // Entlastungswoche: reduziertes Volumen und Gewicht
+  // Plananpassungen: Basis-exerciseId → Ersatz-exerciseId oder null (ausgeblendet)
+  planAnpassungen?: Record<string, string | null>
 }
 
 // Zwei alternierende Ganzkörper-Einheiten als Basis
@@ -85,10 +93,20 @@ const DEHNEN_BEI_DYSBALANCE: Record<string, Record<'zaehler_schwach' | 'nenner_s
 }
 
 export function erstelleWochenplan(input: WochenplanInput): Wochenplan {
-  const { einRMs, ratios, muster, trainingsziel, ga1Zone, logs = [] } = input
+  const { einRMs, ratios, muster, trainingsziel, ga1Zone, logs = [], deload = false } = input
+  const anpassungen = input.planAnpassungen ?? {}
   const tageAnzahl = Math.min(5, Math.max(2, input.trainingstageProWoche))
   const zielKonfig = ZIEL_KONFIG[trainingsziel]
   const hinweise: string[] = []
+
+  // Plananpassung (5.3/Feature): Basis-Übungen ersetzen oder ausblenden.
+  // Rückgabe je Basis-Übung: die anzuzeigende Id plus die Basis-Id (für die UI).
+  const wendeAnpassung = (ids: string[]): { basisId: string; id: string }[] =>
+    ids.flatMap((basisId) => {
+      if (!(basisId in anpassungen)) return [{ basisId, id: basisId }]
+      const ersatz = anpassungen[basisId]
+      return ersatz === null ? [] : [{ basisId, id: ersatz }]
+    })
 
   // Dysbalance-Flags auswerten: schwache Seite priorisieren, starke auf Erhaltung
   const schwach = new Map<string, string>() // exerciseId → Grund
@@ -142,6 +160,14 @@ export function erstelleWochenplan(input: WochenplanInput): Wochenplan {
       vorschlag.prioritaet = 'erhaltung'
       vorschlag.grund = 'Rundrücken: Drückvolumen reduziert (2:1 Zug zu Druck)'
     }
+    // Deload-Woche: Volumen und Gewicht senken, Progression aussetzen
+    if (deload) {
+      vorschlag.saetze = deloadSaetze(vorschlag.saetze)
+      vorschlag.gewichtKg = deloadGewicht(vorschlag.gewichtKg)
+      vorschlag.progression = undefined
+      vorschlag.deload = true
+      vorschlag.grund = 'Deload: reduziertes Volumen und Gewicht zur Regeneration'
+    }
     return vorschlag
   }
 
@@ -165,24 +191,29 @@ export function erstelleWochenplan(input: WochenplanInput): Wochenplan {
   const tage: TrainingsTag[] = []
   for (let i = 0; i < tageAnzahl; i++) {
     const istTagA = i % 2 === 0
-    const kraft = (istTagA ? TAG_A : TAG_B).map((id) => baueKraft(id))
+    const kraft = wendeAnpassung(istTagA ? TAG_A : TAG_B).map(({ basisId, id }) => {
+      const v = baueKraft(id)
+      v.basisId = basisId
+      return v
+    })
 
     // Schwache Übungen, die nicht im Basisplan stehen (z. B. Abduktoren), an A-Tagen ergänzen
-    if (istTagA) {
+    // (in der Deload-Woche kein Zusatzvolumen)
+    if (istTagA && !deload) {
       for (const [id, grund] of schwach) {
         if (!TAG_A.includes(id) && !TAG_B.includes(id)) fuegeHinzuOderVerstaerke(kraft, id, grund)
       }
     }
 
-    // Haltungsblöcke (5.3)
-    if (rundruecken) {
+    // Haltungsblöcke (5.3) – in der Deload-Woche ausgesetzt
+    if (rundruecken && !deload) {
       fuegeHinzuOderVerstaerke(
         kraft,
         'reverse_fly',
         `Rundrücken (${rundruecken.stufe}): zusätzliches Zugvolumen`,
       )
     }
-    if (hohlkreuz) {
+    if (hohlkreuz && !deload) {
       fuegeHinzuOderVerstaerke(
         kraft,
         'crunch_maschine',
@@ -238,7 +269,12 @@ export function erstelleWochenplan(input: WochenplanInput): Wochenplan {
     })
   }
 
-  if (hohlkreuz) {
+  if (deload) {
+    hinweise.push(
+      'Deload-Woche aktiv: reduziertes Volumen und Gewicht. Nutze die Woche zur Erholung – nächste Woche geht die Progression normal weiter.',
+    )
+  }
+  if (hohlkreuz && !deload) {
     hinweise.push(
       'Hohlkreuz-Muster: Dehne die Hüftbeuger täglich – auch an trainingsfreien Tagen (Ausfallschritt, 40 s je Seite).',
     )

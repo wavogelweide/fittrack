@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { ART_LABELS, BEWEGUNGSTYP_LABELS, MUSKEL_LABELS } from '../db/labels'
 import type { CardioGeraet, Exercise, StretchExercise } from '../db/types'
 import { ga1Zone } from '../logic/puls'
-import { empfohlenesIntervallTempo, formatiereTempoBereich } from '../logic/tempo'
+import { formatiereTempoBereich, intervallVorgabe } from '../logic/tempo'
 import { useZurueckGeste } from './zurueckGeste'
 import Chip from './Chip'
 import ExerciseIllustration from './ExerciseIllustration'
@@ -39,7 +40,7 @@ export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; 
         </button>
 
         <div className="rounded-2xl border border-line bg-elev p-5 backdrop-blur-md">
-          {auswahl.typ === 'kraft' && <KraftDetail uebung={auswahl.uebung} />}
+          {auswahl.typ === 'kraft' && <KraftDetail uebung={auswahl.uebung} onClose={onClose} />}
           {auswahl.typ === 'cardio' && <CardioDetail geraet={auswahl.geraet} />}
           {auswahl.typ === 'dehnen' && <DehnDetail uebung={auswahl.uebung} />}
         </div>
@@ -48,11 +49,28 @@ export default function DetailAnsicht({ auswahl, onClose }: { auswahl: Auswahl; 
   )
 }
 
-function KraftDetail({ uebung }: { uebung: Exercise }) {
+function KraftDetail({ uebung, onClose }: { uebung: Exercise; onClose?: () => void }) {
+  // Eigene Übung löschen: auch als Plan-Ersatz austragen; Historie bleibt
+  const loeschen = async () => {
+    if (!window.confirm(`„${uebung.name}" löschen? Protokollierte Workouts bleiben erhalten.`)) return
+    const profil = await db.userProfile.get(1)
+    if (profil?.planAnpassungen) {
+      const bereinigt = Object.fromEntries(
+        Object.entries(profil.planAnpassungen).filter(
+          ([basisId, ersatz]) => basisId !== uebung.id && ersatz !== uebung.id,
+        ),
+      )
+      await db.userProfile.put({ ...profil, planAnpassungen: bereinigt })
+    }
+    await db.exercises.delete(uebung.id)
+    onClose?.()
+  }
+
   return (
     <>
       <div className="mb-1 flex flex-wrap gap-2">
         <Chip text={BEWEGUNGSTYP_LABELS[uebung.bewegungsTyp]} farbe="lime" />
+        {uebung.eigene && <Chip text="Eigene Übung" farbe="cyan" />}
       </div>
       <h2 className="text-3xl font-bold tracking-tight">{uebung.name}</h2>
       <p className="mt-1 text-sm text-txt3">Maschine: {uebung.maschine}</p>
@@ -79,16 +97,67 @@ function KraftDetail({ uebung }: { uebung: Exercise }) {
         </Abschnitt>
       )}
 
+      <NotizSektion exerciseId={uebung.id} />
+
       <MaxGewicht uebung={uebung} />
+
+      {uebung.eigene && (
+        <button
+          onClick={() => void loeschen()}
+          className="mt-6 h-12 w-full rounded-xl border border-danger/30 bg-danger/10 text-sm text-danger active:bg-danger/15"
+        >
+          Eigene Übung löschen
+        </button>
+      )}
     </>
+  )
+}
+
+// Persönliche Maschinen-Notiz (Sitzhöhe, Einstellungen …) – wird im
+// Workout-Modus an der Übung angezeigt
+function NotizSektion({ exerciseId }: { exerciseId: string }) {
+  const profil = useLiveQuery(() => db.userProfile.get(1), [])
+  // lokaler Text gegen Cursor-Sprünge; aus dem Profil initialisiert
+  const [text, setText] = useState<string | null>(null)
+  const wert = text ?? profil?.uebungsNotizen?.[exerciseId] ?? ''
+
+  const speichere = (neu: string) => {
+    setText(neu)
+    const notizen = { ...profil?.uebungsNotizen }
+    if (neu.trim()) notizen[exerciseId] = neu
+    else delete notizen[exerciseId]
+    void db.userProfile.put({
+      trainingsziel: 'hypertrophie',
+      trainingstageProWoche: 3,
+      ...profil,
+      id: 1,
+      uebungsNotizen: notizen,
+    })
+  }
+
+  return (
+    <Abschnitt titel="Meine Maschinen-Notiz">
+      <textarea
+        value={wert}
+        onChange={(e) => speichere(e.target.value)}
+        rows={2}
+        placeholder="z. B. Sitz auf Stufe 4, Griff eng …"
+        aria-label="Maschinen-Notiz"
+        className="w-full rounded-xl border border-line bg-elev px-3 py-2.5 text-base text-txt placeholder-faint outline-none focus:border-line-strong"
+      />
+      <p className="mt-1 text-xs text-muted">
+        Wird im Workout-Modus direkt an der Übung angezeigt.
+      </p>
+    </Abschnitt>
   )
 }
 
 function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
   const profil = useLiveQuery(() => db.userProfile.get(1), [])
   const logs = useLiveQuery(() => db.workoutLogs.toArray(), []) ?? []
+  const goals = useLiveQuery(() => db.goals.toArray(), []) ?? []
   const zone = ga1Zone(profil ?? {})
-  const tempo = empfohlenesIntervallTempo(logs, geraet.id)
+  const tempo = intervallVorgabe(logs, goals, geraet.id, new Date().toISOString().slice(0, 10))
   return (
     <>
       <h2 className="text-3xl font-bold tracking-tight">{geraet.name}</h2>
@@ -136,8 +205,9 @@ function CardioDetail({ geraet }: { geraet: CardioGeraet }) {
                 {' · '}Erholung{' '}
                 <span className="font-bold text-neon-cyan">{formatiereTempoBereich(tempo.erholung)}</span>
                 <span className="block text-xs text-muted">
-                  aus deinem Durchschnittstempo der letzten Einheiten (
-                  {tempo.basisKmh.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h)
+                  {tempo.quelle === 'ziel'
+                    ? `aus deinem Ziel ${tempo.zielKmh!.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h bis ${tempo.zieldatum!.slice(8, 10)}.${tempo.zieldatum!.slice(5, 7)}. – Wochenziel ${tempo.wochenZielKmh!.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h`
+                    : `aus deinem Durchschnittstempo der letzten Einheiten (${tempo.basisKmh.toLocaleString('de-DE', { maximumFractionDigits: 1 })} km/h)`}
                 </span>
               </p>
             ) : (

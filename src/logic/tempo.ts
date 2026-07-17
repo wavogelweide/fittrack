@@ -1,9 +1,11 @@
 // Tempo-Empfehlungen für 60/120-Intervalle (Abschnitt 5.1b):
-// Basis ist das Durchschnittstempo der letzten Einheiten auf dem Gerät,
-// Belastung deutlich darüber (~85–90 % HFmax entspricht grob 115–125 %
-// des Ausdauertempos), Erholung locker darunter (zurück in die GA1-Zone).
-import type { CardioTypeId, WorkoutLog } from '../db/types'
-import { geschwindigkeitKmh } from './ziele'
+// Bevorzugt aus dem Cardio-Leistungsziel abgeleitet – aus Zielgeschwindigkeit
+// und Zieldatum wird das Wochenziel interpoliert (lineare Steigerung vom
+// aktuellen Niveau zum Ziel), daraus Belastung (115–125 %) und Erholung
+// (60–70 %). Ohne Ziel dient das Durchschnittstempo der letzten Einheiten
+// als Basis.
+import type { CardioTypeId, Goal, WorkoutLog } from '../db/types'
+import { geschwindigkeitKmh, tageBisZiel, zielVergleichswert } from './ziele'
 
 export const BELASTUNG_FAKTOR: [number, number] = [1.15, 1.25]
 export const ERHOLUNG_FAKTOR: [number, number] = [0.6, 0.7]
@@ -55,6 +57,74 @@ export function empfohlenesIntervallTempo(
 ): IntervallTempo | null {
   const basis = basisTempoKmh(logs, cardioType)
   return basis === null ? null : intervallTempo(basis)
+}
+
+// --- Zielbasierte Vorgabe -----------------------------------------------------
+
+export interface IntervallTempoMitQuelle extends IntervallTempo {
+  quelle: 'ziel' | 'durchschnitt'
+  // nur bei quelle 'ziel' gesetzt:
+  wochenZielKmh?: number
+  zielKmh?: number
+  zieldatum?: string
+}
+
+// Tempo, das diese Woche erreicht sein soll: ein Wochen-Schritt der linearen
+// Steigerung vom aktuellen Niveau zum Zieltempo. Da die Basis mit jeder
+// Einheit neu gemessen wird, korrigiert sich die Vorgabe von selbst.
+export function wochenZielTempo(
+  basisKmh: number | null,
+  zielKmh: number,
+  tageVerbleibend: number,
+): number {
+  if (basisKmh === null || basisKmh >= zielKmh) return zielKmh
+  const wochen = Math.max(1, Math.ceil(tageVerbleibend / 7))
+  return Math.round((basisKmh + (zielKmh - basisKmh) / wochen) * 100) / 100
+}
+
+// Aktives Leistungsziel für das Gerät (nächstes Zieldatum zuerst)
+export function passendesLeistungsziel(
+  goals: Goal[],
+  cardioType: CardioTypeId,
+): Goal | null {
+  const passende = goals
+    .filter(
+      (g) =>
+        g.typ === 'cardio_leistung' &&
+        g.referenz === cardioType &&
+        g.status === 'aktiv' &&
+        !!g.zieldatum &&
+        !!g.zielDauerMin,
+    )
+    .sort((a, b) => (a.zieldatum ?? '').localeCompare(b.zieldatum ?? ''))
+  return passende[0] ?? null
+}
+
+// Intervall-Vorgabe: bevorzugt aus dem Leistungsziel (Zieltempo + Zieldatum),
+// sonst aus dem Durchschnitt der letzten Einheiten
+export function intervallVorgabe(
+  logs: WorkoutLog[],
+  goals: Goal[],
+  cardioType: CardioTypeId,
+  heute: string,
+): IntervallTempoMitQuelle | null {
+  const ziel = passendesLeistungsziel(goals, cardioType)
+  const basis = basisTempoKmh(logs, cardioType)
+
+  if (ziel) {
+    const zielKmh = zielVergleichswert(ziel)
+    const tage = tageBisZiel(ziel.zieldatum, heute) ?? 0
+    const wochenZiel = wochenZielTempo(basis, zielKmh, Math.max(0, tage))
+    return {
+      ...intervallTempo(wochenZiel),
+      quelle: 'ziel',
+      wochenZielKmh: wochenZiel,
+      zielKmh: Math.round(zielKmh * 100) / 100,
+      zieldatum: ziel.zieldatum,
+    }
+  }
+
+  return basis === null ? null : { ...intervallTempo(basis), quelle: 'durchschnitt' }
 }
 
 export function formatiereTempoBereich(bereich: [number, number]): string {
