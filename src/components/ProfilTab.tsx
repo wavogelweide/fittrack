@@ -7,6 +7,7 @@ import { ga1Zone } from '../logic/puls'
 import { PAUSEN_SEK } from '../logic/progression'
 import { standardWochentage, WOCHENTAG_KURZ } from '../logic/trainingstage'
 import { formatiereSekunden } from '../logic/workout'
+import AppZuruecksetzen from './AppZuruecksetzen'
 import Datensicherung from './Datensicherung'
 import KoerperdatenVerlauf from './KoerperdatenVerlauf'
 import { gespeicherteWahl, setzeTheme, type ThemeWahl } from './theme'
@@ -299,6 +300,8 @@ export default function ProfilTab() {
       )}
 
       <Datensicherung />
+
+      <AppZuruecksetzen />
     </div>
   )
 }
